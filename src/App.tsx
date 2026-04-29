@@ -1,27 +1,65 @@
 import { useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
+import { Dashboard as AdminDashboard } from './pages/Admin/Dashboard'
+import { StaffPage } from './pages/Admin/Staff'
+import { CalendarPage } from './pages/Admin/Calendar'
+import ReceptionPage from './pages/ReceptionPage'
+import ReceptionDirectoryPage from './pages/ReceptionDirectoryPage'
+import UnauthorizedPage from './pages/UnauthorizedPage'
+import { Layout } from './components/layout/Layout'
 import type { User } from './types/auth'
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
 
-
-
   if (!user) return <LoginPage onLogin={setUser} />
 
+  const getDefaultRoute = (role: User["role"]) => {
+    switch (role) {
+      case "admin":
+        return "/admin"
+      case "receptionist":
+        return "/reception"
+      case "doctor":
+      case "nurse":
+        return "/unauthorized"
+      default:
+        return "/unauthorized"
+    }
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <p className="text-2xl font-bold text-gray-800">Bienvenido, {user.name} 👋</p>
-        <p className="text-gray-500 mt-1 text-sm">Rol: {user.role}</p>
-        <button
-          onClick={() => setUser(null)}
-          className="mt-6 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition cursor-pointer"
+    <BrowserRouter>
+      <Routes>
+        {/* Redirige la raíz según el rol */}
+        <Route 
+          path="/" 
+          element={<Navigate to={getDefaultRoute(user.role)} replace />} 
+        />
+
+        {/* Rutas de ADMIN */}
+        <Route
+          path="/admin"
+          element={<Layout user={user} onLogout={() => setUser(null)} />}
         >
-          Cerrar sesión
-        </button>
-      </div>
-    </div>
+          <Route index element={<AdminDashboard />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+        </Route>
+        {/* Rutas de RECEPCION */}
+        <Route path="/reception" element={<ReceptionPage user={user} onLogout={() => setUser(null)} />} />
+        <Route path="/reception/directory" element={<ReceptionDirectoryPage user={user} onLogout={() => setUser(null)} />} />
+
+        {/* Rutas de BLOQUEO */}
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        
+        {/* Fallback */}
+        <Route 
+          path="*" 
+          element={<Navigate to={getDefaultRoute(user.role)} replace />} 
+        />
+      </Routes>
+    </BrowserRouter>
   )
 }
