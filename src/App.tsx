@@ -6,6 +6,7 @@ import { StaffPage } from './pages/Admin/Staff'
 import { CalendarPage } from './pages/Admin/Calendar'
 import ReceptionPage from './pages/ReceptionPage'
 import ReceptionDirectoryPage from './pages/ReceptionDirectoryPage'
+import UnauthorizedPage from './pages/UnauthorizedPage'
 import { Layout } from './components/layout/Layout'
 import type { User } from './types/auth'
 
@@ -14,20 +15,30 @@ export default function App() {
 
   if (!user) return <LoginPage onLogin={setUser} />
 
+  const getDefaultRoute = (role: User["role"]) => {
+    switch (role) {
+      case "admin":
+        return "/admin"
+      case "receptionist":
+        return "/reception"
+      case "doctor":
+      case "nurse":
+        return "/unauthorized"
+      default:
+        return "/unauthorized"
+    }
+  }
+
   return (
     <BrowserRouter>
       <Routes>
         {/* Redirige la raíz según el rol */}
         <Route 
           path="/" 
-          element={
-            user.role === "admin"
-              ? <Navigate to="/admin" replace />
-              : <Navigate to="/reception" replace />
-          } 
+          element={<Navigate to={getDefaultRoute(user.role)} replace />} 
         />
 
-        {/* Rutas de recepción */}
+        {/* Rutas de ADMIN */}
         <Route
           path="/admin"
           element={<Layout user={user} onLogout={() => setUser(null)} />}
@@ -36,15 +47,18 @@ export default function App() {
           <Route path="staff" element={<StaffPage />} />
           <Route path="calendar" element={<CalendarPage />} />
         </Route>
+        {/* Rutas de RECEPCION */}
         <Route path="/reception" element={<ReceptionPage user={user} onLogout={() => setUser(null)} />} />
         <Route path="/reception/directory" element={<ReceptionDirectoryPage user={user} onLogout={() => setUser(null)} />} />
 
+        {/* Rutas de BLOQUEO */}
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        
         {/* Fallback */}
-        <Route path="*" element={
-          user.role === "admin" 
-            ? <Navigate to="/admin" replace />
-            : <Navigate to="/reception" replace />
-          } />
+        <Route 
+          path="*" 
+          element={<Navigate to={getDefaultRoute(user.role)} replace />} 
+        />
       </Routes>
     </BrowserRouter>
   )
