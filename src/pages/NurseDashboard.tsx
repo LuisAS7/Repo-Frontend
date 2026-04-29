@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { User } from '../types/auth'
 
 interface Patient {
@@ -55,6 +56,8 @@ export default function NurseDashboard({ user, onLogout }: Props) {
     bloodPressure: '',
     temperature: '',
   })
+
+  const navigate = useNavigate()
 
   const bmi = (() => {
     const w = parseFloat(form.weight)
@@ -128,7 +131,10 @@ export default function NurseDashboard({ user, onLogout }: Props) {
         {/* Logout */}
         <div className="px-3 py-4 border-t border-gray-100">
           <button
-            onClick={onLogout}
+            onClick={() => {
+              navigate('/');
+              onLogout();
+            }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-50 text-sm transition cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

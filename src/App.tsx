@@ -6,6 +6,7 @@ import { StaffPage } from './pages/Admin/Staff'
 import { CalendarPage } from './pages/Admin/Calendar'
 import ReceptionPage from './pages/ReceptionPage'
 import ReceptionDirectoryPage from './pages/ReceptionDirectoryPage'
+import NurseDashboard from './pages/NurseDashboard'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 import { Layout } from './components/layout/Layout'
 import type { User } from './types/auth'
@@ -22,8 +23,9 @@ export default function App() {
       case "receptionist":
         return "/reception"
       case "doctor":
-      case "nurse":
         return "/unauthorized"
+      case "nurse":
+        return "/nurse"
       default:
         return "/unauthorized"
     }
@@ -48,6 +50,10 @@ export default function App() {
           <Route path="staff" element={<StaffPage />} />
           <Route path="calendar" element={<CalendarPage />} />
         </Route>
+
+        {/* Rutas de ENFERMERA */}
+        <Route path="/nurse" element={<NurseDashboard user={user} onLogout={() => setUser(null)} />} />
+
         {/* Rutas de RECEPCION */}
         <Route path="/reception" element={<ReceptionPage user={user} onLogout={() => setUser(null)} />} />
         <Route path="/reception/directory" element={<ReceptionDirectoryPage user={user} onLogout={() => setUser(null)} />} />
