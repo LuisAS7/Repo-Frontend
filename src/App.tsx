@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import LoginPage from './pages/LoginPage'
+import NurseDashboard from './pages/NurseDashboard'
 import type { User } from './types/auth'
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
 
-
-
   if (!user) return <LoginPage onLogin={setUser} />
 
+  if (user.role === 'nurse')
+    return <NurseDashboard user={user} onLogout={() => setUser(null)} /> 
 
+  // Placeholder para los demás roles
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
