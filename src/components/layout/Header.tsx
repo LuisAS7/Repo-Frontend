@@ -27,7 +27,7 @@ export function Header({ user }: { user: User | null }) {
     const roleLabels: Record<string, string> = {
         admin: "Administrador",
         doctor: "Médico",
-        recepcionist: "Recepción",
+        receptionist: "Recepción",
         nurse: "Enfermería"
     };
 
