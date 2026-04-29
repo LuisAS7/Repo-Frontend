@@ -6,6 +6,7 @@ import { StaffPage } from './pages/Admin/Staff'
 import { CalendarPage } from './pages/Admin/Calendar'
 import { DoctorAgenda } from './pages/Doctor/DoctorAgenda'
 import { Consultation } from './pages/Doctor/Consultation'
+import { NurseDashboard } from './pages/Nurse/NurseDashboard'
 import ReceptionPage from './pages/ReceptionPage'
 import ReceptionDirectoryPage from './pages/ReceptionDirectoryPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
@@ -25,8 +26,6 @@ export default function App() {
         return "/reception"
       case "doctor":
         return "/doctor/agenda"
-      case "nurse":
-        return "/unauthorized"
       case "nurse":
         return "/nurse"
       default:
@@ -60,6 +59,13 @@ export default function App() {
         >
           <Route path="agenda" element={<DoctorAgenda />} />
           <Route path="consultation/:id" element={<Consultation />} />
+        </Route>
+        {/* Rutas de ENFERMERA */}
+        <Route 
+          path="/nurse" 
+          element={<Layout user={user} onLogout={() => setUser(null)} />} 
+        >
+          <Route index element={<NurseDashboard />} />
         </Route>
         {/* Rutas de RECEPCION */}
         <Route path="/reception" element={<ReceptionPage user={user} onLogout={() => setUser(null)} />} />
