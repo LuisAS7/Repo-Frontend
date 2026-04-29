@@ -4,9 +4,10 @@ import LoginPage from './pages/LoginPage'
 import { Dashboard as AdminDashboard } from './pages/Admin/Dashboard'
 import { StaffPage } from './pages/Admin/Staff'
 import { CalendarPage } from './pages/Admin/Calendar'
+import { DoctorAgenda } from './pages/Doctor/DoctorAgenda'
+import { Consultation } from './pages/Doctor/Consultation'
 import ReceptionPage from './pages/ReceptionPage'
 import ReceptionDirectoryPage from './pages/ReceptionDirectoryPage'
-import NurseDashboard from './pages/NurseDashboard'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 import { Layout } from './components/layout/Layout'
 import type { User } from './types/auth'
@@ -23,6 +24,8 @@ export default function App() {
       case "receptionist":
         return "/reception"
       case "doctor":
+        return "/doctor/agenda"
+      case "nurse":
         return "/unauthorized"
       case "nurse":
         return "/nurse"
@@ -50,10 +53,14 @@ export default function App() {
           <Route path="staff" element={<StaffPage />} />
           <Route path="calendar" element={<CalendarPage />} />
         </Route>
-
-        {/* Rutas de ENFERMERA */}
-        <Route path="/nurse" element={<NurseDashboard user={user} onLogout={() => setUser(null)} />} />
-
+        {/* Rutas de DOCTOR */}
+        <Route 
+          path="/doctor" 
+          element={<Layout user={user} onLogout={() => setUser(null)} />}
+        >
+          <Route path="agenda" element={<DoctorAgenda />} />
+          <Route path="consultation/:id" element={<Consultation />} />
+        </Route>
         {/* Rutas de RECEPCION */}
         <Route path="/reception" element={<ReceptionPage user={user} onLogout={() => setUser(null)} />} />
         <Route path="/reception/directory" element={<ReceptionDirectoryPage user={user} onLogout={() => setUser(null)} />} />
