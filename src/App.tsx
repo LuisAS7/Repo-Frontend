@@ -7,8 +7,8 @@ import { CalendarPage } from './pages/Admin/Calendar'
 import { DoctorAgenda } from './pages/Doctor/DoctorAgenda'
 import { Consultation } from './pages/Doctor/Consultation'
 import { NurseDashboard } from './pages/Nurse/NurseDashboard'
-import ReceptionPage from './pages/ReceptionPage'
-import ReceptionDirectoryPage from './pages/ReceptionDirectoryPage'
+import { ReceptionPage } from './pages/Receptionist/ReceptionPage'
+import { ReceptionDirectoryPage } from './pages/Receptionist/ReceptionDirectoryPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 import { Layout } from './components/layout/Layout'
 import type { User } from './types/auth'
@@ -68,8 +68,13 @@ export default function App() {
           <Route index element={<NurseDashboard />} />
         </Route>
         {/* Rutas de RECEPCION */}
-        <Route path="/reception" element={<ReceptionPage user={user} onLogout={() => setUser(null)} />} />
-        <Route path="/reception/directory" element={<ReceptionDirectoryPage user={user} onLogout={() => setUser(null)} />} />
+        <Route 
+          path="/reception" 
+          element={<Layout user={user} onLogout={() => setUser(null)} />} 
+        >
+          <Route index element={<ReceptionPage />} />
+          <Route path="directory" element={<ReceptionDirectoryPage />} />
+        </Route>
 
         {/* Rutas de BLOQUEO */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
