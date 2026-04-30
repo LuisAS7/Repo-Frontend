@@ -2,6 +2,8 @@ export interface Patient {
   firstName: string;
   lastName: string;
   documentNumber?: string;
+  phone?: string;
+  lastVisit?: string;
   medicalBackground?: {
     bloodType: string;
     allergies: string[];
@@ -22,7 +24,8 @@ export interface Appointment {
   time: string;
   patient: Patient;
   reason: string;
-  status: 'READY' | 'WAITING' | 'COMPLETED';
+  doctor: string;
+  status: 'SCHEDULED' | 'READY' | 'WAITING' | 'COMPLETED' | 'CANCELED';
 }
 
 export interface Prescription {
@@ -63,6 +66,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
       triage: { weightKg: 80, heightCm: 175, bmi: 26.1, bloodPressure: "130/85", temperatureC: 36.5 }
     },
     reason: "Control hipertensión anual",
+    doctor: "Dr. Torres",
     status: "READY",
   },
   {
@@ -77,6 +81,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
       triage: { weightKg: 65, heightCm: 165, bmi: 23.9, bloodPressure: "120/80", temperatureC: 37.1 }
     },
     reason: "Dolor abdominal agudo",
+    doctor: "Dr. Torres",
     status: "WAITING",
   },
   {
@@ -91,6 +96,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
       triage: { weightKg: 75, heightCm: 170, bmi: 25.9, bloodPressure: "110/70", temperatureC: 36.7 }
     },
     reason: "Revisión post-operatoria",
+    doctor: "Dr. Torres",
     status: "COMPLETED", 
   },
   {
@@ -105,6 +111,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
       triage: { weightKg: 60, heightCm: 160, bmi: 23.4, bloodPressure: "115/75", temperatureC: 36.8 }
     },
     reason: "Consulta general - Migraña",
+    doctor: "Dr. Torres",
     status: "READY",
   },
 ];
@@ -210,5 +217,28 @@ export const storageService = {
     }
 
     return historyMap[documentNumber] || [];
-  }
+  },
+
+  // --- RECEPCTION ---
+
+  // Add new appointment
+  addAppointment: (appointment: Appointment): void => {
+    const appointments = storageService.getAppointments();
+    appointments.push(appointment);
+    localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+  },
+
+  // Obtain unique patient directory from appointments
+  getPatientsDirectory: (): Patient[] => {
+    const appointments = storageService.getAppointments();
+    const uniquePatientsMap = new Map<string, Patient>();
+    
+    appointments.forEach(appt => {
+      if (appt.patient.documentNumber) {
+        uniquePatientsMap.set(appt.patient.documentNumber, appt.patient);
+      }
+    });
+    
+    return Array.from(uniquePatientsMap.values());
+  },
 };
