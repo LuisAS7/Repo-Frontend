@@ -1,20 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Calendar as CalendarIcon, Filter, Clock, Activity } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
-
-const scheduleData = [
-    { id: 1, time: "08:00 AM", patient: "Roberto Gómez", doctor: "Dr. Torres", specialty: "Cardiología", doctorInitials: "DT", status: "completed" },
-    { id: 2, time: "08:30 AM", patient: "Lucía Fernández", doctor: "Dra. Ruiz", specialty: "Pediatría", doctorInitials: "DR", status: "completed" },
-    { id: 3, time: "09:00 AM", patient: "María García", doctor: "Dr. Torres", specialty: "Cardiología", doctorInitials: "DT", status: "scheduled" },
-    { id: 4, time: "09:15 AM", patient: "Juan Pérez", doctor: "Dra. Ruiz", specialty: "Pediatría", doctorInitials: "DR", status: "waiting" },
-    { id: 5, time: "10:00 AM", patient: "Carlos Díaz", doctor: "Dra. Ruiz", specialty: "Pediatría", doctorInitials: "DR", status: "canceled" },
-    { id: 6, time: "10:30 AM", patient: "Sofia Castro", doctor: "Dr. Méndez", specialty: "Medicina General", doctorInitials: "CM", status: "scheduled" },
-    { id: 7, time: "11:00 AM", patient: "Andrés Silva", doctor: "Dra. Soto", specialty: "Neurología", doctorInitials: "DS", status: "scheduled" },
-];
-
-const specialties = ["Todas las especialidades", "Cardiología", "Pediatría", "Medicina General", "Neurología", "Dermatología"];
-const doctors = ["Todos los médicos", "Dr. Torres", "Dra. Ruiz", "Dr. Méndez", "Dra. Soto"];
+import { storageService } from "../../services/storageService";
+import type { Appointment, Staff } from "../../services/storageService";
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -27,26 +16,55 @@ const getStatusBadge = (status: string) => {
 };
 
 export function CalendarPage() {
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [staffDoctors, setStaffDoctors] = useState<Staff[]>([]);
+
     const [selectedSpecialty, setSelectedSpecialty] = useState("Todas las especialidades");
     const [selectedDoctor, setSelectedDoctor] = useState("Todos los médicos");
     const [searchTerm, setSearchTerm] = useState("");
 
-    const filteredSchedule = useMemo(() => {
-        return scheduleData.filter(item => {
-        const matchSpecialty = selectedSpecialty === "Todas las especialidades" || item.specialty === selectedSpecialty;
-        const matchDoctor = selectedDoctor === "Todos los médicos" || item.doctor === selectedDoctor;
-        const matchSearch = item.patient.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchSpecialty && matchDoctor && matchSearch;
-        });
-    }, [selectedSpecialty, selectedDoctor, searchTerm]);
+    useEffect(() => {
+        setAppointments(storageService.getAppointments());
+        setStaffDoctors(storageService.getStaff().filter(s => s.role === "Doctor"));
+    }, []);
 
+    const specialties = useMemo(() => {
+        // Obtain unique specialties from doctor staff
+        const uniqueSpecs = new Set(staffDoctors.map(doc => doc.specialty).filter(Boolean));
+        return ["Todas las especialidades", ...Array.from(uniqueSpecs)];
+    }, [staffDoctors]);
+
+    const doctors = useMemo(() => {
+        const uniqueDoctors = new Set(staffDoctors.map(doc => doc.name));
+        return ["Todos los médicos", ...Array.from(uniqueDoctors)];
+    }, [staffDoctors]);
+
+    const filteredSchedule = useMemo(() => {
+        return appointments.filter(item => {
+            // Search for the doctor's specialty
+            const docInfo = staffDoctors.find(d => d.name === item.doctor);
+            const itemSpecialty = docInfo ? docInfo.specialty : "Sin Asignar";
+
+            const matchSpecialty = selectedSpecialty === "Todas las especialidades" || itemSpecialty === selectedSpecialty;
+            const matchDoctor = selectedDoctor === "Todos los médicos" || item.doctor === selectedDoctor;
+            
+            const fullName = `${item.patient.firstName} ${item.patient.lastName}`.toLowerCase();
+            const matchSearch = fullName.includes(searchTerm.toLowerCase());
+            
+            return matchSpecialty && matchDoctor && matchSearch;
+        });
+    }, [appointments, selectedSpecialty, selectedDoctor, searchTerm, staffDoctors]);
+
+    // Resume count of appointments by specialty for the summary cards
     const summary = useMemo(() => {
         const counts: Record<string, number> = {};
-        scheduleData.forEach(item => {
-        counts[item.specialty] = (counts[item.specialty] || 0) + 1;
+        appointments.forEach(item => {
+            const docInfo = staffDoctors.find(d => d.name === item.doctor);
+            const specialty = docInfo?.specialty || "Sin Asignar";
+            counts[specialty] = (counts[specialty] || 0) + 1;
         });
         return counts;
-    }, []);
+    }, [appointments, staffDoctors]);
 
     return (
         <div className="max-w-7xl mx-auto space-y-6 h-full flex flex-col">
@@ -79,7 +97,7 @@ export function CalendarPage() {
                     onChange={e => setSelectedSpecialty(e.target.value)}
                     className="pl-9 pr-8 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full appearance-none bg-white dark:bg-slate-800 dark:text-slate-100 font-medium"
                 >
-                    {specialties.map(s => <option key={s} value={s}>{s}</option>)}
+                    {specialties.map(s => <option key={s} value={s as string}>{s}</option>)}
                 </select>
                 </div>
 
@@ -91,7 +109,7 @@ export function CalendarPage() {
                     onChange={e => setSelectedDoctor(e.target.value)}
                     className="pl-9 pr-8 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full appearance-none bg-white dark:bg-slate-800 dark:text-slate-100 font-medium"
                 >
-                    {doctors.map(d => <option key={d} value={d}>{d}</option>)}
+                    {doctors.map(d => <option key={d} value={d as string}>{d}</option>)}
                 </select>
                 </div>
             </div>
@@ -127,7 +145,13 @@ export function CalendarPage() {
                 </div>
             ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredSchedule.map((item) => (
+                {filteredSchedule.map((item) => {
+                    // Calculate doctor's specialty and initials for display
+                    const docInfo = staffDoctors.find(d => d.name === item.doctor);
+                    const docInitials = item.doctor.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+                    const itemSpecialty = docInfo?.specialty || "Sin Asignar";
+
+                    return (
                     <div key={item.id} className="p-4 sm:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex flex-col sm:flex-row sm:items-center gap-4">
                     {/* Time */}
                     <div className="flex items-center gap-2 w-32 shrink-0 text-slate-600 dark:text-slate-400 font-medium">
@@ -137,14 +161,16 @@ export function CalendarPage() {
 
                     {/* Patient info */}
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{item.patient}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.specialty}</p>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {item.patient.firstName} {item.patient.lastName}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{itemSpecialty}</p>
                     </div>
 
                     {/* Doctor */}
                     <div className="flex items-center gap-2 w-48 shrink-0">
                         <div className="size-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">
-                        {item.doctorInitials}
+                        {docInitials}
                         </div>
                         <span className="text-sm text-slate-600 dark:text-slate-300 truncate font-medium">{item.doctor}</span>
                     </div>
@@ -154,7 +180,8 @@ export function CalendarPage() {
                         {getStatusBadge(item.status)}
                     </div>
                     </div>
-                ))}
+                    )
+                })}
                 </div>
             )}
             </div>
