@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Activity, Search, AlertTriangle } from "lucide-react";
 import { Modal } from '../../components/ui/Modal'
 
-const waitingPatients = [
+const PATIENTS_KEY = 'valsync_triage_patients'
+
+const seedPatients = [
   {
     id: 1,
     time: "09:15 AM",
@@ -33,19 +35,29 @@ const waitingPatients = [
       chronicDiseases: ["Hipertensión", "Diabetes Tipo 2"]
     }
   }
-];
+]
+
+function getInitialPatients() {
+  try {
+    const stored = localStorage.getItem(PATIENTS_KEY)
+    if (stored) return JSON.parse(stored)
+    localStorage.setItem(PATIENTS_KEY, JSON.stringify(seedPatients))
+    return seedPatients
+  } catch {
+    return seedPatients
+  }
+}
 
 export function NurseDashboard() {
-  const [patients, setPatients] = useState(waitingPatients);
-  const [selectedPatient, setSelectedPatient] = useState<typeof waitingPatients[0] | null>(null);
+  const [patients, setPatients] = useState(getInitialPatients);
+  const [selectedPatient, setSelectedPatient] = useState<typeof seedPatients[0] | null>(null);
   
-  // Triage Form State
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [bloodPressure, setBloodPressure] = useState("");
   const [temperature, setTemperature] = useState("");
 
-  const handleTakeVitals = (patient: typeof waitingPatients[0]) => {
+  const handleTakeVitals = (patient: typeof seedPatients[0]) => {
     setSelectedPatient(patient);
     setWeight("");
     setHeight("");
@@ -71,8 +83,9 @@ export function NurseDashboard() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPatient) {
-      // Logic to move patient to READY
-      setPatients(patients.filter(p => p.id !== selectedPatient.id));
+      const updated = patients.filter(p => p.id !== selectedPatient.id);
+      setPatients(updated);
+      localStorage.setItem(PATIENTS_KEY, JSON.stringify(updated));
       setSelectedPatient(null);
     }
   };
@@ -97,7 +110,6 @@ export function NurseDashboard() {
         </div>
       </div>
 
-      {/* Patient List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {patients.length > 0 ? (
           <div className="divide-y divide-slate-100">
@@ -144,7 +156,6 @@ export function NurseDashboard() {
         )}
       </div>
 
-      {/* Triage Modal */}
       <Modal
         open={!!selectedPatient}
         onOpenChange={(isOpen) => !isOpen && handleCloseModal()}
@@ -153,7 +164,6 @@ export function NurseDashboard() {
       >
         {selectedPatient && (
           <div className="space-y-6">
-            {/* Safety Banner */}
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div className="flex justify-between items-start mb-3 border-b border-slate-200 pb-3">
                 <div>
@@ -238,7 +248,6 @@ export function NurseDashboard() {
                 </div>
               </div>
 
-              {/* Auto-calc BMI */}
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex justify-between items-center mt-2">
                 <span className="text-sm font-medium text-slate-600">Índice de Masa Corporal (IMC)</span>
                 <span className="text-xl font-bold text-slate-900 bg-white px-4 py-1 rounded-lg border border-slate-200">
