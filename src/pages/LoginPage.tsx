@@ -56,10 +56,10 @@ export default function LoginPage({ onLogin }: Props) {
           </div>
 
           <h1 className="text-white text-4xl xl:text-5xl font-extrabold leading-tight mb-6">
-            Gestión clínica<br />moderna para tu<br />equipo.
+            Gestión clínica<br />moderna para tu<br />equipo
           </h1>
           <p className="text-blue-200 text-base leading-relaxed max-w-xs">
-            Sistema integrado para coordinación médica, control de triage y gestión eficiente de pacientes.
+            Sistema integrado para coordinación médica, control de triage y gestión eficiente de pacientes
           </p>
         </div>
 
