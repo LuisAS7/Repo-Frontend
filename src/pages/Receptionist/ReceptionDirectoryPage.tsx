@@ -39,15 +39,37 @@ export function ReceptionDirectoryPage() {
   }, [search])
 
   const handleBookSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSuccess(true);
-    setTimeout(() => {
-      setIsSuccess(false);
-      setSelectedPatient(null);
-      setBookingSpecialty("");
-      setBookingDoctor("");
-    }, 2000);
-  };
+  e.preventDefault();
+
+  // Leer la queue actual del localStorage
+  const saved = localStorage.getItem('reception_queue')
+  const currentQueue = saved ? JSON.parse(saved) : []
+
+  // Obtener fecha y hora del formulario
+  const dateInput = (document.getElementById('date') as HTMLInputElement).value
+  const timeInput = (document.getElementById('time') as HTMLSelectElement).value
+  const doctorName = doctorsData.find(d => d.id === bookingDoctor)?.name ?? 'Por asignar'
+
+  // Crear la nueva cita
+  const newAppointment = {
+    id: Date.now(),
+    time: `${dateInput} ${timeInput}`,
+    patient: selectedPatient!.name,
+    doctor: doctorName,
+    status: 'SCHEDULED'
+  }
+
+  // Guardar en localStorage
+  localStorage.setItem('reception_queue', JSON.stringify([...currentQueue, newAppointment]))
+
+  setIsSuccess(true)
+  setTimeout(() => {
+    setIsSuccess(false)
+    setSelectedPatient(null)
+    setBookingSpecialty("")
+    setBookingDoctor("")
+  }, 2000)
+}
 
   const availableDoctors = doctorsData.filter(d => d.specialty === bookingSpecialty);
 
