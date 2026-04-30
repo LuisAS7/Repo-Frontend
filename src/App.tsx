@@ -13,10 +13,29 @@ import UnauthorizedPage from './pages/UnauthorizedPage'
 import { Layout } from './components/layout/Layout'
 import type { User } from './types/auth'
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(null)
+const SESSION_KEY = 'valsync_user'
 
-  if (!user) return <LoginPage onLogin={setUser} />
+export default function App() {
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem(SESSION_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
+
+  const handleLogin = (loggedUser: User) => {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(loggedUser))
+    setUser(loggedUser)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem(SESSION_KEY)
+    setUser(null)
+  }
+
+  if (!user) return <LoginPage onLogin={handleLogin} />
 
   const getDefaultRoute = (role: User["role"]) => {
     switch (role) {
@@ -49,7 +68,7 @@ export default function App() {
         {/* Rutas de ADMIN */}
         <Route
           path="/admin"
-          element={<Layout user={user} onLogout={() => setUser(null)} />}
+          element={<Layout user={user} onLogout={handleLogout} />}
         >
           <Route index element={<AdminDashboard />} />
           <Route path="staff" element={<StaffPage />} />
@@ -58,7 +77,7 @@ export default function App() {
         {/* Rutas de DOCTOR */}
         <Route 
           path="/doctor" 
-          element={<Layout user={user} onLogout={() => setUser(null)} />}
+          element={<Layout user={user} onLogout={handleLogout} />}
         >
           <Route path="agenda" element={<DoctorAgenda />} />
           <Route path="consultation/:id" element={<Consultation />} />
@@ -66,14 +85,14 @@ export default function App() {
         {/* Rutas de ENFERMERA */}
         <Route 
           path="/nurse" 
-          element={<Layout user={user} onLogout={() => setUser(null)} />} 
+          element={<Layout user={user} onLogout={handleLogout} />} 
         >
           <Route index element={<NurseDashboard />} />
         </Route>
         {/* Rutas de RECEPCION */}
         <Route 
           path="/reception" 
-          element={<Layout user={user} onLogout={() => setUser(null)} />} 
+          element={<Layout user={user} onLogout={handleLogout} />} 
         >
           <Route index element={<ReceptionPage />} />
           <Route path="directory" element={<ReceptionDirectoryPage />} />

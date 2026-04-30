@@ -1,6 +1,7 @@
 export interface Patient {
   firstName: string;
   lastName: string;
+  age?: number;
   documentNumber?: string;
   phone?: string;
   lastVisit?: string;
@@ -76,6 +77,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
     patient: { 
       firstName: "María", 
       lastName: "González",
+      age: 28,
       documentNumber: "12345678-9",
       medicalBackground: { bloodType: "O+", allergies: ["Penicilina", "Látex"], chronicDiseases: ["Asma leve"] },
       triage: { weightKg: 65, heightCm: 165, bmi: 23.9, bloodPressure: "120/80", temperatureC: 37.1 }
@@ -240,5 +242,20 @@ export const storageService = {
     });
     
     return Array.from(uniquePatientsMap.values());
+  },
+
+  // NURSE //
+  saveTriage: (appointmentId: number, triageData: Patient['triage']): void => {
+    const appointments = storageService.getAppointments();
+    const index = appointments.findIndex(a => a.id === appointmentId);
+    
+    if (index !== -1) {
+      // Save triage data in the appointment's patient record
+      appointments[index].patient.triage = triageData;
+      // Change status to READY after triage is completed
+      appointments[index].status = 'READY';
+      
+      localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
+    }
   },
 };
