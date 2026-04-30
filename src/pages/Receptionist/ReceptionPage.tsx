@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import { UserPlus, Clock, UserCheck } from "lucide-react";
-import { Modal } from "../../components/ui/Modal";
+import { useEffect, useState } from "react"
+import { UserPlus, UserCheck } from "lucide-react"
+import { StatusBadge } from "./components/StatusBadge"
+import { FilterBar } from "./components/FilterBar"
+import { WalkInModal } from "./components/WalkInModal"
 
 const doctorsData = [
   { id: "1", name: "Dr. Torres", specialty: "Medicina General" },
@@ -10,38 +12,24 @@ const doctorsData = [
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)))
 
 const initialQueue = [
-  {
-    id: 1,
-    time: "08:30 AM",
-    patient: "Carlos Mendoza",
-    doctor: "Dr. Torres",
-    status: "SCHEDULED" // SCHEDULED, WAITING, CANCELED
-  },
-  {
-    id: 2,
-    time: "09:15 AM",
-    patient: "María González",
-    doctor: "Dra. Ruiz",
-    status: "WAITING"
-  },
-  {
-    id: 3,
-    time: "10:00 AM",
-    patient: "Juan Pérez",
-    doctor: "Dr. Torres",
-    status: "CANCELED"
-  }
-];
+  { id: 1, time: "08:30 AM", patient: "Carlos Mendoza",  doctor: "Dr. Torres", status: "SCHEDULED" },
+  { id: 2, time: "09:15 AM", patient: "María González",  doctor: "Dra. Ruiz",  status: "WAITING"   },
+  { id: 3, time: "10:00 AM", patient: "Juan Pérez",      doctor: "Dr. Torres", status: "CANCELED"  },
+]
 
 export function ReceptionPage() {
-
   const [queue, setQueue] = useState<typeof initialQueue>(() => {
     const saved = localStorage.getItem('reception_queue')
     return saved ? JSON.parse(saved) : initialQueue
-  });
+  })
 
   const [filterDoctor, setFilterDoctor] = useState("")
   const [filterSpecialty, setFilterSpecialty] = useState("")
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem('reception_queue', JSON.stringify(queue))
+  }, [queue])
 
   const filteredQueue = queue.filter(item => {
     const matchDoctor = filterDoctor === "" || item.doctor === filterDoctor
@@ -49,88 +37,45 @@ export function ReceptionPage() {
     return matchDoctor && matchSpecialty
   })
 
-  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const handleMarkArrived = (id: number) =>
+    setQueue(q => q.map(item => item.id === id ? { ...item, status: "WAITING" } : item))
 
-  const [walkInDNI, setWalkInDNI] = useState("");
-  const [walkInFirstName, setWalkInFirstName] = useState("");
-  const [walkInLastName, setWalkInLastName] = useState("");
-  const [walkInPhone, setWalkInPhone] = useState("");
+  const handleCancel = (id: number) =>
+    setQueue(q => q.map(item => item.id === id ? { ...item, status: "CANCELED" } : item))
 
-  useEffect(() => {
-    localStorage.setItem('reception_queue', JSON.stringify(queue))
-  }, [queue])
-
-  const handleMarkArrived = (id: number) => {
-    setQueue(queue.map(q => q.id === id ? { ...q, status: "WAITING" } : q));
-  };
-
-  const handleCancelAppointment = (id: number) => {
-    setQueue(queue.map(q => q.id === id ? { ...q, status: "CANCELED" } : q));
-  }
-
-  const handleWalkInSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Agregar a la queue (agenda)
-    const newPatient = {
+  const handleWalkIn = ({ dni, firstName, lastName, phone }: { dni: string; firstName: string; lastName: string; phone: string }) => {
+    // Agregar a la agenda
+    setQueue(q => [...q, {
       id: Date.now(),
       time: "Ahora (Walk-in)",
-      patient: `${walkInFirstName} ${walkInLastName}`,
+      patient: `${firstName} ${lastName}`,
       doctor: "Asignación rápida",
       status: "WAITING"
-    };
-    setQueue([...queue, newPatient]);
+    }])
 
-    // Agregar al directorio en localStorage
-    const savedDirectory = localStorage.getItem('reception_directory')
-    const currentDirectory = savedDirectory ? JSON.parse(savedDirectory) : []
-    const newDirectoryEntry = {
+    // Agregar al directorio
+    const saved = localStorage.getItem('reception_directory')
+    const current = saved ? JSON.parse(saved) : []
+    localStorage.setItem('reception_directory', JSON.stringify([...current, {
       id: Date.now() + 1,
-      name: `${walkInFirstName} ${walkInLastName}`,
-      dni: walkInDNI,
-      phone: walkInPhone,
+      name: `${firstName} ${lastName}`,
+      dni,
+      phone,
       lastVisit: new Date().toLocaleDateString('es-PE')
-    }
-    localStorage.setItem('reception_directory', JSON.stringify([...currentDirectory, newDirectoryEntry]))
-
-    setIsWalkInModalOpen(false);
-    setWalkInDNI("");
-    setWalkInFirstName("");
-    setWalkInLastName("");
-    setWalkInPhone("");
+    }]))
   }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "SCHEDULED":
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-          <Clock className="w-3.5 h-3.5" /> Programada
-        </span>;
-      case "WAITING":
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> En Sala de Espera
-        </span>;
-      case "CANCELED":
-        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-          Cancelada
-        </span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-          {status}
-        </span>;
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Agenda Diaria (Recepción)</h1>
           <p className="text-slate-500 mt-1">Gestión de pacientes programados y atenciones de urgencia.</p>
         </div>
-
         <button
-          onClick={() => setIsWalkInModalOpen(true)}
+          onClick={() => setIsWalkInOpen(true)}
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm"
         >
           <UserPlus className="size-5" />
@@ -139,33 +84,16 @@ export function ReceptionPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-3">
-        <select
-          value={filterSpecialty}
-          onChange={e => { setFilterSpecialty(e.target.value); setFilterDoctor("") }}
-          className="px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="">Todas las especialidades</option>
-          {specialtiesList.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+      <FilterBar
+        doctorsData={doctorsData}
+        specialtiesList={specialtiesList}
+        filterDoctor={filterDoctor}
+        filterSpecialty={filterSpecialty}
+        onSpecialtyChange={v => { setFilterSpecialty(v); setFilterDoctor("") }}
+        onDoctorChange={setFilterDoctor}
+      />
 
-        <select
-          value={filterDoctor}
-          onChange={e => setFilterDoctor(e.target.value)}
-          className="px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-        >
-          <option value="">Todos los médicos</option>
-          {doctorsData
-            .filter(d => filterSpecialty === "" || d.specialty === filterSpecialty)
-            .map(d => (
-              <option key={d.id} value={d.name}>{d.name}</option>
-            ))}
-        </select>
-      </div>
-
-      {/* Main Content (Today's Queue) */}
+      {/* Tabla */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -179,25 +107,25 @@ export function ReceptionPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredQueue.map((item) => (
+              {filteredQueue.map(item => (
                 <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-semibold text-slate-700">{item.time}</td>
                   <td className="px-6 py-4 font-bold text-slate-900">{item.patient}</td>
                   <td className="px-6 py-4 text-slate-600">{item.doctor}</td>
-                  <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                  <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
                   <td className="px-6 py-4 text-right">
                     {item.status === "SCHEDULED" && (
                       <button
                         onClick={() => handleMarkArrived(item.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 font-medium rounded-lg transition-colors border border-green-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 font-medium rounded-lg transition-colors border border-green-200"
                       >
                         <UserCheck className="w-4 h-4" /> Marcar Llegada
                       </button>
                     )}
                     {item.status === "WAITING" && (
                       <button
-                        onClick={() => handleCancelAppointment(item.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-medium rounded-lg transition-colors border border-red-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        onClick={() => handleCancel(item.id)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-medium rounded-lg transition-colors border border-red-200"
                       >
                         Cancelar
                       </button>
@@ -213,79 +141,12 @@ export function ReceptionPage() {
         </div>
       </div>
 
-      {/* Quick Walk-in Modal */}
-      <Modal
-        open={isWalkInModalOpen}
-        onOpenChange={setIsWalkInModalOpen}
-        title="Ingreso Rápido de Paciente"
-        description="Añada un paciente que llegó sin cita previa a la sala de espera."
-      >
-        <form onSubmit={handleWalkInSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="walkInDNI">DNI / Documento</label>
-            <input
-              id="walkInDNI"
-              type="text"
-              value={walkInDNI}
-              onChange={(e) => setWalkInDNI(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="walkInFirstName">Nombre</label>
-              <input
-                id="walkInFirstName"
-                type="text"
-                value={walkInFirstName}
-                onChange={(e) => setWalkInFirstName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="walkInLastName">Apellido</label>
-              <input
-                id="walkInLastName"
-                type="text"
-                value={walkInLastName}
-                onChange={(e) => setWalkInLastName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="walkInPhone">Teléfono de Contacto</label>
-            <input
-              id="walkInPhone"
-              type="tel"
-              value={walkInPhone}
-              onChange={(e) => setWalkInPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-              required
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsWalkInModalOpen(false)}
-              className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors focus:ring-2 focus:ring-slate-500"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              Añadir a Espera
-            </button>
-          </div>
-        </form>
-      </Modal>
+      {/* Modal Walk-in */}
+      <WalkInModal
+        open={isWalkInOpen}
+        onOpenChange={setIsWalkInOpen}
+        onSubmit={handleWalkIn}
+      />
     </div>
-  );
+  )
 }
