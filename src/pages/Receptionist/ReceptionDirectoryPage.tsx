@@ -1,91 +1,68 @@
 import { useEffect, useState } from "react";
 import { Search, CalendarDays, User, Phone, Check } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
-
-// Mock Directory
-interface Patient {
-  id: number
-  name: string
-  dni: string
-  phone: string
-  lastVisit: string
-}
-
-const getDirectory = (): Patient[] => {
-  const saved = localStorage.getItem('reception_directory')
-  if (saved) return JSON.parse(saved)
-  
-  // Si no hay nada, guarda el mock y lo retorna
-  const mock = [
-    { id: 101, name: "Ana Martínez", dni: "11223344-5", phone: "+34 600 111 222", lastVisit: "12 Mar 2023" },
-    { id: 102, name: "Roberto Gómez", dni: "55667788-9", phone: "+34 600 333 444", lastVisit: "05 Ene 2024" },
-    { id: 103, name: "Laura Sánchez", dni: "99887766-5", phone: "+34 600 555 666", lastVisit: "22 Feb 2024" },
-    { id: 104, name: "Pedro Luis", dni: "44332211-0", phone: "+34 600 777 888", lastVisit: "15 Abr 2023" }
-  ]
-  localStorage.setItem('reception_directory', JSON.stringify(mock))
-  return mock
-}
+import { storageService } from "../../services/storageService";
+import type { Patient } from "../../services/storageService";
 
 const doctorsData = [
-  { id: "1", name: "Dr. Roberto Torres", specialty: "Medicina General" },
-  { id: "2", name: "Dra. Elena Ruiz", specialty: "Pediatría" },
-  { id: "3", name: "Dr. Carlos Méndez", specialty: "Cardiología" },
-  { id: "4", name: "Dra. Ana Soto", specialty: "Neurología" },
-  { id: "5", name: "Dr. Miguel Silva", specialty: "Medicina General" },
-];
+  { id: "1", name: "Dr. Torres", specialty: "Medicina General" },
+  { id: "2", name: "Dra. Ruiz", specialty: "Pediatría" },
+  { id: "3", name: "Dr. Burke", specialty: "Cardiología" },
+  { id: "4", name: "Dra. Fernández", specialty: "Dermatología" },
+  { id: "5", name: "Dr. Shepard", specialty: "Neurología" },
+]
 
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)));
 
 export function ReceptionDirectoryPage() {
-  const [directory, setDirectory] = useState<Patient[]>(getDirectory)
+  const [directory, setDirectory] = useState<Patient[]>(() => storageService.getPatientsDirectory())
   const [search, setSearch] = useState(() => {
     return localStorage.getItem('reception_search') ?? ""
   });
-  const [selectedPatient, setSelectedPatient] = useState<typeof directory[0] | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const [bookingSpecialty, setBookingSpecialty] = useState("");
   const [bookingDoctor, setBookingDoctor] = useState("");
 
-  const filteredDirectory = directory.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) || p.dni.includes(search)
-  );
+  const filteredDirectory = directory.filter(p => {
+    const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+    const docNumber = p.documentNumber?.toLowerCase() || "";
+    return fullName.includes(search.toLowerCase()) || docNumber.includes(search.toLowerCase());
+  }); 
 
   useEffect(() => {
     localStorage.setItem('reception_search', search)
   }, [search])
 
   const handleBookSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // Leer la queue actual del localStorage
-  const saved = localStorage.getItem('reception_queue')
-  const currentQueue = saved ? JSON.parse(saved) : []
+    if (!selectedPatient) return;
 
-  // Obtener fecha y hora del formulario
-  const dateInput = (document.getElementById('date') as HTMLInputElement).value
-  const timeInput = (document.getElementById('time') as HTMLSelectElement).value
-  const doctorName = doctorsData.find(d => d.id === bookingDoctor)?.name ?? 'Por asignar'
+    const dateInput = (document.getElementById('date') as HTMLInputElement).value;
+    const timeInput = (document.getElementById('time') as HTMLSelectElement).value;
+    const reasonInput = (document.getElementById('reason') as HTMLTextAreaElement).value;
+    const doctorName = doctorsData.find(d => d.id === bookingDoctor)?.name ?? 'Por asignar';
 
-  // Crear la nueva cita
-  const newAppointment = {
-    id: Date.now(),
-    time: `${dateInput} ${timeInput}`,
-    patient: selectedPatient!.name,
-    doctor: doctorName,
-    status: 'SCHEDULED'
-  }
+    // Use storageService for add appointment
+    storageService.addAppointment({
+      id: Date.now(),
+      date: dateInput,
+      time: timeInput,
+      patient: selectedPatient,
+      reason: reasonInput,
+      doctor: doctorName,
+      status: 'SCHEDULED'
+    });
 
-  // Guardar en localStorage
-  localStorage.setItem('reception_queue', JSON.stringify([...currentQueue, newAppointment]))
-
-  setIsSuccess(true)
-  setTimeout(() => {
-    setIsSuccess(false)
-    setSelectedPatient(null)
-    setBookingSpecialty("")
-    setBookingDoctor("")
-  }, 2000)
+    setIsSuccess(true);
+    setTimeout(() => {
+      setIsSuccess(false);
+      setSelectedPatient(null);
+      setBookingSpecialty("");
+      setBookingDoctor("");
+    }, 2000);
 }
 
   const availableDoctors = doctorsData.filter(d => d.specialty === bookingSpecialty);
@@ -117,18 +94,18 @@ export function ReceptionDirectoryPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="divide-y divide-slate-100">
           {filteredDirectory.length > 0 ? (
-            filteredDirectory.map((patient) => (
-              <div key={patient.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            filteredDirectory.map((patient, index) => (
+              <div key={index} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
-                    {patient.name.substring(0, 2).toUpperCase()}
+                    {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-lg font-bold text-slate-900 leading-none">
-                      {patient.name}
+                      {patient.firstName} {patient.lastName}
                     </h3>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-                      <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> DNI: {patient.dni}</span>
+                      <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> DNI: {patient.documentNumber || "No disponible"}</span>
                       <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {patient.phone}</span>
                     </div>
                   </div>
@@ -166,13 +143,13 @@ export function ReceptionDirectoryPage() {
                 <Check className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">¡Cita Programada!</h3>
-              <p className="text-slate-500">La cita para {selectedPatient.name} ha sido registrada con éxito.</p>
+              <p className="text-slate-500">La cita para {selectedPatient.firstName} ha sido registrada con éxito.</p>
             </div>
           ) : (
             <form onSubmit={handleBookSubmit} className="space-y-4">
               <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 mb-2">
                 <label className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Paciente Seleccionado</label>
-                <div className="font-bold text-slate-900 text-lg mt-0.5">{selectedPatient.name}</div>
+                <div className="font-bold text-slate-900 text-lg mt-0.5">{selectedPatient.firstName} {selectedPatient.lastName}</div>
               </div>
 
               <div className="space-y-4">

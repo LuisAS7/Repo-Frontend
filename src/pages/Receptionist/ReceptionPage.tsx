@@ -3,33 +3,30 @@ import { UserPlus, UserCheck } from "lucide-react"
 import { StatusBadge } from "./components/StatusBadge"
 import { FilterBar } from "./components/FilterBar"
 import { WalkInModal } from "./components/WalkInModal"
+import { storageService } from "../../services/storageService"
+import { format } from "date-fns"
 
 const doctorsData = [
   { id: "1", name: "Dr. Torres", specialty: "Medicina General" },
   { id: "2", name: "Dra. Ruiz", specialty: "Pediatría" },
+  { id: "3", name: "Dr. Burke", specialty: "Cardiología" },
+  { id: "4", name: "Dra. Fernández", specialty: "Dermatología" },
+  { id: "5", name: "Dr. Shepard", specialty: "Neurología" },
 ]
 
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)))
 
-const initialQueue = [
-  { id: 1, time: "08:30 AM", patient: "Carlos Mendoza",  doctor: "Dr. Torres", status: "SCHEDULED" },
-  { id: 2, time: "09:15 AM", patient: "María González",  doctor: "Dra. Ruiz",  status: "WAITING"   },
-  { id: 3, time: "10:00 AM", patient: "Juan Pérez",      doctor: "Dr. Torres", status: "CANCELED"  },
-]
-
 export function ReceptionPage() {
-  const [queue, setQueue] = useState<typeof initialQueue>(() => {
-    const saved = localStorage.getItem('reception_queue')
-    return saved ? JSON.parse(saved) : initialQueue
-  })
+  const [queue, setQueue] = useState(() => storageService.getAppointments())
+  
+  // Update localStorage whenever queue changes
+  useEffect(() => {
+    setQueue(storageService.getAppointments());
+  }, []);
 
   const [filterDoctor, setFilterDoctor] = useState("")
   const [filterSpecialty, setFilterSpecialty] = useState("")
   const [isWalkInOpen, setIsWalkInOpen] = useState(false)
-
-  useEffect(() => {
-    localStorage.setItem('reception_queue', JSON.stringify(queue))
-  }, [queue])
 
   const filteredQueue = queue.filter(item => {
     const matchDoctor = filterDoctor === "" || item.doctor === filterDoctor
@@ -37,32 +34,40 @@ export function ReceptionPage() {
     return matchDoctor && matchSpecialty
   })
 
-  const handleMarkArrived = (id: number) =>
-    setQueue(q => q.map(item => item.id === id ? { ...item, status: "WAITING" } : item))
+  const handleMarkArrived = (id: number) => {
+    storageService.updateAppointmentStatus(id, 'WAITING'); // Update in storage
+    setQueue(storageService.getAppointments()); // Refresh local state from storage
+  }
 
-  const handleCancel = (id: number) =>
-    setQueue(q => q.map(item => item.id === id ? { ...item, status: "CANCELED" } : item))
+  const handleCancel = (id: number) => {
+    storageService.updateAppointmentStatus(id, 'CANCELED');
+    setQueue(storageService.getAppointments());
+  }
 
   const handleWalkIn = ({ dni, firstName, lastName, phone }: { dni: string; firstName: string; lastName: string; phone: string }) => {
-    // Agregar a la agenda
-    setQueue(q => [...q, {
-      id: Date.now(),
-      time: "Ahora (Walk-in)",
-      patient: `${firstName} ${lastName}`,
-      doctor: "Asignación rápida",
-      status: "WAITING"
-    }])
+    const today = new Date();
+    const formattedDate = format(today, "yyyy-MM-dd");
 
-    // Agregar al directorio
-    const saved = localStorage.getItem('reception_directory')
-    const current = saved ? JSON.parse(saved) : []
-    localStorage.setItem('reception_directory', JSON.stringify([...current, {
-      id: Date.now() + 1,
-      name: `${firstName} ${lastName}`,
-      dni,
-      phone,
-      lastVisit: new Date().toLocaleDateString('es-PE')
-    }]))
+    // Agregar a la agenda
+    storageService.addAppointment({
+      id: Date.now(),
+      date: formattedDate,
+      time: "Ahora (Walk-in)",
+      patient: {
+        firstName,
+        lastName,
+        documentNumber: dni,
+        phone,
+        lastVisit: formattedDate
+      },
+      reason: "Atención de urgencia / Ingreso rápido",
+      doctor: "Asignación rápida",
+      status: "WAITING" // Un walk-in pasa directo a esperar Triage
+    });
+
+    // Refresh local state
+    setQueue(storageService.getAppointments());
+    setIsWalkInOpen(false);
   }
 
   return (
@@ -96,24 +101,24 @@ export function ReceptionPage() {
       {/* Tabla */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-sm whitespace-nowrap">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
               <tr>
                 <th className="px-6 py-4 font-medium">Hora</th>
                 <th className="px-6 py-4 font-medium">Paciente</th>
                 <th className="px-6 py-4 font-medium">Médico Asignado</th>
                 <th className="px-6 py-4 font-medium">Estado</th>
-                <th className="px-6 py-4 font-medium text-right">Acción</th>
+                <th className="px-6 py-4 font-medium text-center">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-center">
               {filteredQueue.map(item => (
                 <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-semibold text-slate-700">{item.time}</td>
-                  <td className="px-6 py-4 font-bold text-slate-900">{item.patient}</td>
+                  <td className="px-6 py-4 font-bold text-slate-900">{item.patient.firstName} {item.patient.lastName}</td>
                   <td className="px-6 py-4 text-slate-600">{item.doctor}</td>
                   <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4">
                     {item.status === "SCHEDULED" && (
                       <button
                         onClick={() => handleMarkArrived(item.id)}
