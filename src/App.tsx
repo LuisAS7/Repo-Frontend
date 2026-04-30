@@ -52,7 +52,10 @@ export default function App() {
     }
   }
 
-  // Placeholder para los demás roles
+  // Uncomment if you want to bypass the router for doctors
+  // if (user.role === 'doctor') {
+  //   return <DoctorDashboard user={user} onLogout={() => setUser(null)} />
+  // }
   return (
     <BrowserRouter>
       <Routes>

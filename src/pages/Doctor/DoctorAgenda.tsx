@@ -1,44 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, User, FileText, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router";
-
-// Mock data for doctor's agenda
-const mockAppointments = [
-    {
-        id: 1,
-        time: "08:30 AM",
-        patient: { firstName: "Carlos", lastName: "Mendoza" },
-        reason: "Control hipertensión anual",
-        status: "READY",
-    },
-    {
-        id: 2,
-        time: "09:15 AM",
-        patient: { firstName: "María", lastName: "González" },
-        reason: "Dolor abdominal agudo",
-        status: "WAITING",
-    },
-    {
-        id: 3,
-        time: "10:00 AM",
-        patient: { firstName: "Juan", lastName: "Pérez" },
-        reason: "Revisión post-operatoria",
-        status: "COMPLETED", 
-    },
-    {
-        id: 4,
-        time: "11:30 AM",
-        patient: { firstName: "Ana", lastName: "Martínez" },
-        reason: "Consulta general - Migraña",
-        status: "READY",
-    },
-];
+import { useNavigate } from "react-router-dom";
+import { storageService } from "../../services/storageService";
+import type { Appointment } from "../../services/storageService";
 
 export function DoctorAgenda() {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Obtain all appointments from storage
+        const allAppointments = storageService.getAppointments();
+        
+        const formattedCurrentDate = format(currentDate, "yyyy-MM-dd");
+        
+        // Filter appointments for the current date
+        const dailyAppointments = allAppointments.filter(
+            appt => appt.date === formattedCurrentDate
+        );
+
+        setAppointments(dailyAppointments);
+    }, [currentDate]);
 
     const handlePrevDay = () => setCurrentDate(subDays(currentDate, 1));
     const handleNextDay = () => setCurrentDate(addDays(currentDate, 1));
@@ -89,7 +74,7 @@ export function DoctorAgenda() {
             </h2>
             
             <div className="grid gap-4 md:grid-cols-2">
-            {mockAppointments.map((appt) => (
+            {appointments.map((appt) => (
                 <div 
                 key={appt.id} 
                 className={`p-5 rounded-2xl border transition-all ${
