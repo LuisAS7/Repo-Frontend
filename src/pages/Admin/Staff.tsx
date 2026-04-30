@@ -1,16 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
-
-const initialStaff = [
-    { id: 1, name: "Carlos Mendoza", email: "carlos.mendoza@valsync.com", role: "Admin", active: true },
-    { id: 2, name: "Dr. Roberto Torres", email: "rtorres@valsync.com", role: "Doctor", active: true },
-    { id: 3, name: "Dra. Elena Ruiz", email: "eruiz@valsync.com", role: "Doctor", active: true },
-    { id: 4, name: "Sofia Castro", email: "scastro@valsync.com", role: "Nurse", active: true },
-    { id: 5, name: "Miguel Ángel", email: "mangel@valsync.com", role: "Receptionist", active: false },
-];
+import { storageService } from "../../services/storageService";
+import type { Staff } from "../../services/storageService";
 
 const getRoleBadge = (role: string) => {
     switch (role) {
@@ -23,13 +17,41 @@ const getRoleBadge = (role: string) => {
 };
 
 export function StaffPage() {
-    const [staff, setStaff] = useState(initialStaff);
+    const [staff, setStaff] = useState<Staff[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState("");
 
+    useEffect(() => {
+        setStaff(storageService.getStaff());
+    }, []);
+
     const toggleStatus = (id: number) => {
-        setStaff(staff.map(s => s.id === id ? { ...s, active: !s.active } : s));
-};
+        storageService.toggleStaffStatus(id); // Update status in storage
+        setStaff(storageService.getStaff());
+    };
+
+    const handleAddStaff = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        const firstName = (document.getElementById('firstName') as HTMLInputElement).value;
+        const lastName = (document.getElementById('lastName') as HTMLInputElement).value;
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const specialtyElement = document.getElementById('specialty') as HTMLSelectElement | null;
+
+        const newEmployee: Staff = {
+            id: Date.now(),
+            name: `${firstName} ${lastName}`,
+            email: email,
+            role: selectedRole,
+            active: true,
+            specialty: specialtyElement ? specialtyElement.value : undefined
+        };
+
+        storageService.addStaff(newEmployee);
+        setStaff(storageService.getStaff()); // Refresh table
+        setIsModalOpen(false);
+        setSelectedRole("");
+    };
 
     return (
         <div className="max-w-7xl mx-auto space-y-6">
@@ -61,7 +83,10 @@ export function StaffPage() {
                 <tbody className="divide-y divide-slate-100">
                 {staff.map((employee) => (
                     <tr key={employee.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{employee.name}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                        {employee.name}
+                        {employee.specialty && <span className="block text-xs text-slate-400 font-normal">{employee.specialty}</span>}
+                    </td>
                     <td className="px-6 py-4 text-slate-600">{employee.email}</td>
                     <td className="px-6 py-4">{getRoleBadge(employee.role)}</td>
                     <td className="px-6 py-4 text-right">
@@ -93,7 +118,7 @@ export function StaffPage() {
             title="Añadir Nuevo Personal"
             description="Crea una nueva cuenta para que un miembro del staff pueda acceder a ValSync."
         >
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setIsModalOpen(false); }}>
+            <form className="space-y-4" onSubmit={handleAddStaff}>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700" htmlFor="firstName">Nombre</label>

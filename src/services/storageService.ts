@@ -54,6 +54,15 @@ export interface ConsultationRecord {
   date: string;
 }
 
+export interface Staff {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  specialty?: string;
+}
+
 const INITIAL_APPOINTMENTS: Appointment[] = [
   {
     id: 1,
@@ -137,6 +146,18 @@ const INITIAL_HISTORY: Record<string, ConsultationHistory[]> = {
   ]
 };
 
+const INITIAL_STAFF: Staff[] = [
+  { id: 1, name: "Carlos Mendoza", email: "admin@valsync.com", role: "Admin", active: true },
+  { id: 2, name: "Dr. Torres", email: "torres@valsync.com", role: "Doctor", active: true, specialty: "Medicina General" },
+  { id: 3, name: "Dra. Ruiz", email: "ruiz@valsync.com", role: "Doctor", active: true, specialty: "Pediatría" },
+  { id: 4, name: "Dr. Burke", email: "burke@valsync.com", role: "Doctor", active: true, specialty: "Cardiología" },
+  { id: 5, name: "Dra. Fernández", email: "fernandez@valsync.com", role: "Doctor", active: true, specialty: "Dermatología" },
+  { id: 6, name: "Dr. Shepard", email: "shepard@valsync.com", role: "Doctor", active: true, specialty: "Neurología" },
+  { id: 7, name: "Sofia Castro", email: "nurse@valsync.com", role: "Nurse", active: true },
+  { id: 8, name: "Miguel Ángel", email: "recepcion@valsync.com", role: "Receptionist", active: true },
+];
+
+const STAFF_KEY = 'valsync_admin_staff';
 const APPOINTMENTS_KEY = 'valsync_doctor_appointments';
 const CONSULTATIONS_KEY = 'valsync_doctor_consultations';
 const HISTORY_KEY = 'valsync_doctor_history';
@@ -258,4 +279,29 @@ export const storageService = {
       localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
     }
   },
+
+  // ADMIN //
+  getStaff: (): Staff[] => {
+    const data = localStorage.getItem(STAFF_KEY);
+    if (!data) {
+      localStorage.setItem(STAFF_KEY, JSON.stringify(INITIAL_STAFF));
+      return INITIAL_STAFF;
+    }
+    return JSON.parse(data);
+  },
+
+  addStaff: (employee: Staff): void => {
+      const staff = storageService.getStaff();
+      staff.push(employee);
+      localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
+  },
+
+  toggleStaffStatus: (id: number): void => {
+      const staff = storageService.getStaff();
+      const index = staff.findIndex(s => s.id === id);
+      if (index !== -1) {
+        staff[index].active = !staff[index].active;
+        localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
+      }
+  }
 };
