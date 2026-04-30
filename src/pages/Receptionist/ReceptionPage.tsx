@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { UserPlus, Clock, UserCheck } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 
+const doctorsData = [
+  { id: "1", name: "Dr. Torres", specialty: "Medicina General" },
+  { id: "2", name: "Dra. Ruiz", specialty: "Pediatría" },
+]
+
+const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)))
+
 const initialQueue = [
   {
     id: 1,
@@ -33,6 +40,15 @@ export function ReceptionPage() {
     return saved ? JSON.parse(saved) : initialQueue
   });
 
+  const [filterDoctor, setFilterDoctor] = useState("")
+  const [filterSpecialty, setFilterSpecialty] = useState("")
+
+  const filteredQueue = queue.filter(item => {
+    const matchDoctor = filterDoctor === "" || item.doctor === filterDoctor
+    const matchSpecialty = filterSpecialty === "" || doctorsData.find(d => d.name === item.doctor)?.specialty === filterSpecialty
+    return matchDoctor && matchSpecialty
+  })
+
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
 
   const [walkInDNI, setWalkInDNI] = useState("");
@@ -48,8 +64,14 @@ export function ReceptionPage() {
     setQueue(queue.map(q => q.id === id ? { ...q, status: "WAITING" } : q));
   };
 
+  const handleCancelAppointment = (id: number) => {
+    setQueue(queue.map(q => q.id === id ? { ...q, status: "CANCELED" } : q));
+  }
+
   const handleWalkInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Agregar a la queue (agenda)
     const newPatient = {
       id: Date.now(),
       time: "Ahora (Walk-in)",
@@ -58,13 +80,25 @@ export function ReceptionPage() {
       status: "WAITING"
     };
     setQueue([...queue, newPatient]);
+
+    // Agregar al directorio en localStorage
+    const savedDirectory = localStorage.getItem('reception_directory')
+    const currentDirectory = savedDirectory ? JSON.parse(savedDirectory) : []
+    const newDirectoryEntry = {
+      id: Date.now() + 1,
+      name: `${walkInFirstName} ${walkInLastName}`,
+      dni: walkInDNI,
+      phone: walkInPhone,
+      lastVisit: new Date().toLocaleDateString('es-PE')
+    }
+    localStorage.setItem('reception_directory', JSON.stringify([...currentDirectory, newDirectoryEntry]))
+
     setIsWalkInModalOpen(false);
-    // Reset form
     setWalkInDNI("");
     setWalkInFirstName("");
     setWalkInLastName("");
     setWalkInPhone("");
-  };
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -104,6 +138,33 @@ export function ReceptionPage() {
         </button>
       </div>
 
+      {/* Filtros */}
+      <div className="flex gap-3">
+        <select
+          value={filterSpecialty}
+          onChange={e => { setFilterSpecialty(e.target.value); setFilterDoctor("") }}
+          className="px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">Todas las especialidades</option>
+          {specialtiesList.map(s => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+
+        <select
+          value={filterDoctor}
+          onChange={e => setFilterDoctor(e.target.value)}
+          className="px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">Todos los médicos</option>
+          {doctorsData
+            .filter(d => filterSpecialty === "" || d.specialty === filterSpecialty)
+            .map(d => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+        </select>
+      </div>
+
       {/* Main Content (Today's Queue) */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -118,21 +179,30 @@ export function ReceptionPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {queue.map((item) => (
+              {filteredQueue.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-semibold text-slate-700">{item.time}</td>
                   <td className="px-6 py-4 font-bold text-slate-900">{item.patient}</td>
                   <td className="px-6 py-4 text-slate-600">{item.doctor}</td>
                   <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
                   <td className="px-6 py-4 text-right">
-                    {item.status === "SCHEDULED" ? (
+                    {item.status === "SCHEDULED" && (
                       <button
                         onClick={() => handleMarkArrived(item.id)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 font-medium rounded-lg transition-colors border border-green-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
                       >
                         <UserCheck className="w-4 h-4" /> Marcar Llegada
                       </button>
-                    ) : (
+                    )}
+                    {item.status === "WAITING" && (
+                      <button
+                        onClick={() => handleCancelAppointment(item.id)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-medium rounded-lg transition-colors border border-red-200 focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                    {item.status === "CANCELED" && (
                       <span className="text-slate-400 italic text-xs">Sin acciones</span>
                     )}
                   </td>

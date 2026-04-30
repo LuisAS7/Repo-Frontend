@@ -3,12 +3,28 @@ import { Search, CalendarDays, User, Phone, Check } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 
 // Mock Directory
-const directory = [
-  { id: 101, name: "Ana Martínez", dni: "11223344-5", phone: "+34 600 111 222", lastVisit: "12 Mar 2023" },
-  { id: 102, name: "Roberto Gómez", dni: "55667788-9", phone: "+34 600 333 444", lastVisit: "05 Ene 2024" },
-  { id: 103, name: "Laura Sánchez", dni: "99887766-5", phone: "+34 600 555 666", lastVisit: "22 Feb 2024" },
-  { id: 104, name: "Pedro Luis", dni: "44332211-0", phone: "+34 600 777 888", lastVisit: "15 Abr 2023" }
-];
+interface Patient {
+  id: number
+  name: string
+  dni: string
+  phone: string
+  lastVisit: string
+}
+
+const getDirectory = (): Patient[] => {
+  const saved = localStorage.getItem('reception_directory')
+  if (saved) return JSON.parse(saved)
+  
+  // Si no hay nada, guarda el mock y lo retorna
+  const mock = [
+    { id: 101, name: "Ana Martínez", dni: "11223344-5", phone: "+34 600 111 222", lastVisit: "12 Mar 2023" },
+    { id: 102, name: "Roberto Gómez", dni: "55667788-9", phone: "+34 600 333 444", lastVisit: "05 Ene 2024" },
+    { id: 103, name: "Laura Sánchez", dni: "99887766-5", phone: "+34 600 555 666", lastVisit: "22 Feb 2024" },
+    { id: 104, name: "Pedro Luis", dni: "44332211-0", phone: "+34 600 777 888", lastVisit: "15 Abr 2023" }
+  ]
+  localStorage.setItem('reception_directory', JSON.stringify(mock))
+  return mock
+}
 
 const doctorsData = [
   { id: "1", name: "Dr. Roberto Torres", specialty: "Medicina General" },
@@ -21,6 +37,7 @@ const doctorsData = [
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)));
 
 export function ReceptionDirectoryPage() {
+  const [directory, setDirectory] = useState<Patient[]>(getDirectory)
   const [search, setSearch] = useState(() => {
     return localStorage.getItem('reception_search') ?? ""
   });
