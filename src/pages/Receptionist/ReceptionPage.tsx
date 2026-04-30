@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { UserPlus, Clock, UserCheck } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 
@@ -27,13 +27,22 @@ const initialQueue = [
 ];
 
 export function ReceptionPage() {
-  const [queue, setQueue] = useState(initialQueue);
+
+  const [queue, setQueue] = useState<typeof initialQueue>(() => {
+    const saved = localStorage.getItem('reception_queue')
+    return saved ? JSON.parse(saved) : initialQueue
+  });
+
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
 
   const [walkInDNI, setWalkInDNI] = useState("");
   const [walkInFirstName, setWalkInFirstName] = useState("");
   const [walkInLastName, setWalkInLastName] = useState("");
   const [walkInPhone, setWalkInPhone] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem('reception_queue', JSON.stringify(queue))
+  }, [queue])
 
   const handleMarkArrived = (id: number) => {
     setQueue(queue.map(q => q.id === id ? { ...q, status: "WAITING" } : q));
@@ -85,8 +94,8 @@ export function ReceptionPage() {
           <h1 className="text-2xl font-bold text-slate-900">Agenda Diaria (Recepción)</h1>
           <p className="text-slate-500 mt-1">Gestión de pacientes programados y atenciones de urgencia.</p>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => setIsWalkInModalOpen(true)}
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm"
         >
@@ -117,7 +126,7 @@ export function ReceptionPage() {
                   <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
                   <td className="px-6 py-4 text-right">
                     {item.status === "SCHEDULED" ? (
-                      <button 
+                      <button
                         onClick={() => handleMarkArrived(item.id)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 font-medium rounded-lg transition-colors border border-green-200 focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
                       >
@@ -144,60 +153,60 @@ export function ReceptionPage() {
         <form onSubmit={handleWalkInSubmit} className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700" htmlFor="walkInDNI">DNI / Documento</label>
-            <input 
-              id="walkInDNI" 
-              type="text" 
+            <input
+              id="walkInDNI"
+              type="text"
               value={walkInDNI}
               onChange={(e) => setWalkInDNI(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-              required 
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              required
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700" htmlFor="walkInFirstName">Nombre</label>
-              <input 
-                id="walkInFirstName" 
-                type="text" 
+              <input
+                id="walkInFirstName"
+                type="text"
                 value={walkInFirstName}
                 onChange={(e) => setWalkInFirstName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-                required 
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                required
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700" htmlFor="walkInLastName">Apellido</label>
-              <input 
-                id="walkInLastName" 
-                type="text" 
+              <input
+                id="walkInLastName"
+                type="text"
                 value={walkInLastName}
                 onChange={(e) => setWalkInLastName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-                required 
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                required
               />
             </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700" htmlFor="walkInPhone">Teléfono de Contacto</label>
-            <input 
-              id="walkInPhone" 
-              type="tel" 
+            <input
+              id="walkInPhone"
+              type="tel"
               value={walkInPhone}
               onChange={(e) => setWalkInPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-              required 
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+              required
             />
           </div>
 
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-            <button 
+            <button
               type="button"
               onClick={() => setIsWalkInModalOpen(false)}
               className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors focus:ring-2 focus:ring-slate-500"
             >
               Cancelar
             </button>
-            <button 
+            <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
             >

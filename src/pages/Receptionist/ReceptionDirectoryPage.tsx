@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, CalendarDays, User, Phone, Check } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 
@@ -21,16 +21,22 @@ const doctorsData = [
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)));
 
 export function ReceptionDirectoryPage() {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => {
+    return localStorage.getItem('reception_search') ?? ""
+  });
   const [selectedPatient, setSelectedPatient] = useState<typeof directory[0] | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  
+
   const [bookingSpecialty, setBookingSpecialty] = useState("");
   const [bookingDoctor, setBookingDoctor] = useState("");
 
-  const filteredDirectory = directory.filter(p => 
+  const filteredDirectory = directory.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) || p.dni.includes(search)
   );
+
+  useEffect(() => {
+    localStorage.setItem('reception_search', search)
+  }, [search])
 
   const handleBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,14 +58,14 @@ export function ReceptionDirectoryPage() {
           <h1 className="text-2xl font-bold text-slate-900">Directorio de Pacientes</h1>
           <p className="text-slate-500 mt-1">Busque pacientes existentes para programar nuevas citas médicas.</p>
         </div>
-        
+
         {/* Large Search Bar */}
         <div className="relative mt-4">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-6 w-6 text-blue-500" />
           </div>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre o DNI/Documento..."
@@ -89,7 +95,7 @@ export function ReceptionDirectoryPage() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setSelectedPatient(patient)}
                   className="w-full sm:w-auto px-5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition-colors border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2 shrink-0"
                 >
@@ -134,14 +140,14 @@ export function ReceptionDirectoryPage() {
                 {/* Step 1: Specialty */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700" htmlFor="specialty">1. Seleccione Especialidad</label>
-                  <select 
-                    id="specialty" 
+                  <select
+                    id="specialty"
                     value={bookingSpecialty}
                     onChange={(e) => {
                       setBookingSpecialty(e.target.value);
                       setBookingDoctor(""); // Reset doctor when specialty changes
                     }}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm" 
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
                     required
                   >
                     <option value="">Seleccione una especialidad...</option>
@@ -154,11 +160,11 @@ export function ReceptionDirectoryPage() {
                 {/* Step 2: Doctor */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700" htmlFor="doctor">2. Seleccione Médico</label>
-                  <select 
-                    id="doctor" 
+                  <select
+                    id="doctor"
                     value={bookingDoctor}
                     onChange={(e) => setBookingDoctor(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400" 
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400"
                     required
                     disabled={!bookingSpecialty}
                   >
@@ -173,16 +179,16 @@ export function ReceptionDirectoryPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700 block mb-1">3. Seleccione Fecha y Hora</label>
                   <div className="grid grid-cols-2 gap-4">
-                    <input 
-                      id="date" 
-                      type="date" 
-                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400" 
-                      required 
+                    <input
+                      id="date"
+                      type="date"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400"
+                      required
                       disabled={!bookingDoctor}
                     />
-                    <select 
-                      id="time" 
-                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400" 
+                    <select
+                      id="time"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400"
                       required
                       disabled={!bookingDoctor}
                     >
@@ -198,10 +204,10 @@ export function ReceptionDirectoryPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700" htmlFor="reason">Motivo de Consulta</label>
-                  <textarea 
-                    id="reason" 
-                    rows={2} 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm resize-none disabled:bg-slate-50 disabled:text-slate-400" 
+                  <textarea
+                    id="reason"
+                    rows={2}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm resize-none disabled:bg-slate-50 disabled:text-slate-400"
                     placeholder="Breve descripción del motivo de la cita..."
                     required
                     disabled={!bookingDoctor}
@@ -210,14 +216,14 @@ export function ReceptionDirectoryPage() {
               </div>
 
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-                <button 
+                <button
                   type="button"
                   onClick={() => setSelectedPatient(null)}
                   className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors focus:ring-2 focus:ring-slate-500"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 shadow-sm"
                 >
