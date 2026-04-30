@@ -1,51 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
     User, CreditCard, Activity, AlertTriangle, Thermometer, 
     Heart, Scale, Search, Plus, Trash2, FileText, Download,
     Droplet, Calendar, History, Stethoscope
 } from "lucide-react";
-import { useNavigate } from "react-router";
-
-// Mock data
-const patientData = {
-    firstName: "María",
-    lastName: "González",
-    documentNumber: "12345678-9",
-    medicalBackground: {
-        bloodType: "O+",
-        allergies: ["Penicilina", "Látex"],
-        chronicDiseases: ["Asma leve"],
-    },
-    triage: {
-        weightKg: 65,
-        heightCm: 165,
-        bmi: 23.9,
-        bloodPressure: "120/80",
-        temperatureC: 37.1,
-    }
-};
-
-const pastHistory = [
-    {
-        id: 1,
-        date: "12 Oct 2023",
-        diagnosisCie10: "J45.9 - Asma, no especificada",
-        plan: "Continuar con inhalador de rescate. Evitar exposición a alérgenos conocidos. Control en 3 meses.",
-        prescriptions: ["Salbutamol 100mcg - 2 puffs SOS"]
-    },
-    {
-        id: 2,
-        date: "05 Ene 2023",
-        diagnosisCie10: "J06.9 - Infección aguda de las vías respiratorias superiores",
-        plan: "Reposo relativo, abundante hidratación. Uso de antipiréticos si hay fiebre mayor a 38°C.",
-        prescriptions: ["Paracetamol 500mg - 1 tab c/8h", "Loratadina 10mg - 1 tab c/24h"]
-    }
-];
+import { useNavigate, useParams } from "react-router-dom";
+import { storageService } from "../../services/storageService";
+import type { Appointment, ConsultationHistory } from "../../services/storageService";
 
 export function Consultation() {
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    
+    const [appointment, setAppointment] = useState<Appointment | null>(null);
+    const [pastHistory, setPastHistory] = useState<ConsultationHistory[]>([]);
+
     const [activeTab, setActiveTab] = useState<'general' | 'soap' | 'history'>('soap');
+    
+    // SOAP State
+    const [subjective, setSubjective] = useState("");
+    const [objective, setObjective] = useState("");
+    const [assessment, setAssessment] = useState("");
+    const [plan, setPlan] = useState("");
+    
     const [prescriptions, setPrescriptions] = useState([{ medication: "", dose: "", frequency: "", durationDays: "" }]);
+
+    useEffect(() => {
+        if (id) {
+            const appt = storageService.getAppointmentById(Number(id));
+            if (appt) {
+                setAppointment(appt);
+                if (appt.patient.documentNumber) {
+                    setPastHistory(storageService.getPatientHistory(appt.patient.documentNumber));
+                }
+            } else {
+                // If appointment not found, go back
+                navigate('/doctor/agenda');
+            }
+        }
+    }, [id, navigate]);
 
     const addPrescription = () => {
         setPrescriptions([...prescriptions, { medication: "", dose: "", frequency: "", durationDays: "" }]);
@@ -60,6 +53,26 @@ export function Consultation() {
         newPrescriptions[index] = { ...newPrescriptions[index], [field]: value };
         setPrescriptions(newPrescriptions);
     };
+
+    const handleFinishConsultation = () => {
+        if (!appointment) return;
+        
+        storageService.saveConsultation({
+            appointmentId: appointment.id,
+            subjective,
+            objective,
+            assessment,
+            plan,
+            prescriptions: prescriptions.filter(p => p.medication.trim() !== ""),
+            date: new Date().toISOString()
+        });
+
+        navigate('/doctor/agenda');
+    };
+
+    if (!appointment) return null; // Or a loading spinner
+
+    const patientData = appointment.patient;
 
     return (
         <div className="max-w-250 mx-auto h-[calc(100vh-8rem)] flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative transition-colors">
@@ -157,11 +170,11 @@ export function Consultation() {
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Grupo Sanguíneo</span>
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-medium text-sm border border-red-100 dark:border-red-900/30">
                         <Droplet className="w-3.5 h-3.5" />
-                        {patientData.medicalBackground.bloodType}
+                        {patientData.medicalBackground?.bloodType || "N/A"}
                     </span>
                     </div>
 
-                    {patientData.medicalBackground.allergies.length > 0 && (
+                    {patientData.medicalBackground?.allergies && patientData.medicalBackground.allergies.length > 0 && (
                     <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4">
                         <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-500 font-semibold text-sm mb-2">
                         <AlertTriangle className="w-4 h-4" />
@@ -180,7 +193,7 @@ export function Consultation() {
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Enfermedades Crónicas</span>
                     <div className="flex flex-wrap gap-2">
-                        {patientData.medicalBackground.chronicDiseases.length > 0 ? (
+                        {patientData.medicalBackground?.chronicDiseases && patientData.medicalBackground.chronicDiseases.length > 0 ? (
                         patientData.medicalBackground.chronicDiseases.map(disease => (
                             <span key={disease} className="px-2.5 py-1 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-600">
                             {disease}
@@ -200,6 +213,7 @@ export function Consultation() {
                     Signos Vitales (Triage Actual)
                 </h3>
                 
+                {patientData.triage ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                     <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mb-1">
@@ -236,6 +250,9 @@ export function Consultation() {
                     <span className="font-semibold text-slate-900 dark:text-slate-100">{patientData.triage.temperatureC}°C</span>
                     </div>
                 </div>
+                ) : (
+                <div className="text-center py-4 text-slate-500">No hay datos de triage registrados.</div>
+                )}
                 </div>
             </div>
             )}
@@ -249,6 +266,8 @@ export function Consultation() {
                     <textarea 
                     className="w-full h-24 p-3 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-colors text-sm dark:text-slate-100"
                     placeholder="Motivo de consulta, síntomas referidos por el paciente..."
+                    value={subjective}
+                    onChange={(e) => setSubjective(e.target.value)}
                     />
                 </div>
                 
@@ -257,6 +276,8 @@ export function Consultation() {
                     <textarea 
                     className="w-full h-24 p-3 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-colors text-sm dark:text-slate-100"
                     placeholder="Hallazgos del examen físico, resultados de laboratorio..."
+                    value={objective}
+                    onChange={(e) => setObjective(e.target.value)}
                     />
                 </div>
 
@@ -275,6 +296,8 @@ export function Consultation() {
                     <textarea 
                     className="w-full h-20 p-3 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-800 transition-colors text-sm dark:text-slate-100"
                     placeholder="Análisis y diagnóstico del profesional..."
+                    value={assessment}
+                    onChange={(e) => setAssessment(e.target.value)}
                     />
                 </div>
 
@@ -283,6 +306,8 @@ export function Consultation() {
                     <textarea 
                     className="w-full h-24 p-3 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-colors text-sm dark:text-slate-100"
                     placeholder="Tratamiento sugerido, recomendaciones, próximas citas..."
+                    value={plan}
+                    onChange={(e) => setPlan(e.target.value)}
                     />
                 </div>
                 </div>
@@ -403,7 +428,7 @@ export function Consultation() {
             Cancelar
             </button>
             <button 
-            onClick={() => navigate('/doctor/agenda')}
+            onClick={handleFinishConsultation}
             className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 flex items-center gap-2"
             >
             Finalizar Consulta
