@@ -1,64 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity, Search, AlertTriangle } from "lucide-react";
 import { Modal } from '../../components/ui/Modal'
-
-const PATIENTS_KEY = 'valsync_triage_patients'
-
-const seedPatients = [
-  {
-    id: 1,
-    time: "09:15 AM",
-    patient: { 
-      firstName: "María", 
-      lastName: "González",
-      age: 45,
-      documentNumber: "12345678-9"
-    },
-    medicalBackground: {
-      bloodType: "O+",
-      allergies: ["Penicilina", "Látex"],
-      chronicDiseases: ["Asma leve"]
-    }
-  },
-  {
-    id: 2,
-    time: "09:45 AM",
-    patient: { 
-      firstName: "José", 
-      lastName: "Ramírez",
-      age: 62,
-      documentNumber: "98765432-1"
-    },
-    medicalBackground: {
-      bloodType: "A-",
-      allergies: [],
-      chronicDiseases: ["Hipertensión", "Diabetes Tipo 2"]
-    }
-  }
-]
-
-function getInitialPatients() {
-  try {
-    const stored = localStorage.getItem(PATIENTS_KEY)
-    if (stored) return JSON.parse(stored)
-    localStorage.setItem(PATIENTS_KEY, JSON.stringify(seedPatients))
-    return seedPatients
-  } catch {
-    return seedPatients
-  }
-}
+import { storageService } from '../../services/storageService';
+import type { Appointment } from '../../services/storageService';
 
 export function NurseDashboard() {
-  const [patients, setPatients] = useState(getInitialPatients);
-  const [selectedPatient, setSelectedPatient] = useState<typeof seedPatients[0] | null>(null);
+  const [waitingPatients, setWaitingPatients] = useState<Appointment[]>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [bloodPressure, setBloodPressure] = useState("");
   const [temperature, setTemperature] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const handleTakeVitals = (patient: typeof seedPatients[0]) => {
-    setSelectedPatient(patient);
+  const loadWaitingPatients = () => {
+    const all = storageService.getAppointments();
+    setWaitingPatients(all.filter(a => a.status === 'WAITING'));
+  };
+
+  useEffect(() => { 
+    loadWaitingPatients();
+  }, []);
+
+  const handleTakeVitals = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
     setWeight("");
     setHeight("");
     setBloodPressure("");
@@ -66,7 +32,7 @@ export function NurseDashboard() {
   };
 
   const handleCloseModal = () => {
-    setSelectedPatient(null);
+    setSelectedAppointment(null);
   };
 
   const calculateBMI = () => {
@@ -82,13 +48,26 @@ export function NurseDashboard() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedPatient) {
-      const updated = patients.filter(p => p.id !== selectedPatient.id);
-      setPatients(updated);
-      localStorage.setItem(PATIENTS_KEY, JSON.stringify(updated));
-      setSelectedPatient(null);
+    if (selectedAppointment) {
+      storageService.saveTriage(selectedAppointment.id, {
+        weightKg: parseFloat(weight),
+        heightCm: parseFloat(height),
+        bmi: parseFloat(calculateBMI() as string),
+        bloodPressure: bloodPressure,
+        temperatureC: parseFloat(temperature)
+    });
+      // Refresh the waiting patients list after saving triage data
+      loadWaitingPatients();
+      setSelectedAppointment(null);
     }
   };
+
+  // Filter patients based on search term (if implemented)
+  const filteredPatients = waitingPatients.filter(appt => {
+    const fullName = `${appt.patient.firstName} ${appt.patient.lastName}`.toLowerCase();
+    const docNumber = appt.patient.documentNumber || "";
+    return fullName.includes(searchTerm.toLowerCase()) || docNumber.includes(searchTerm);
+  });
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -104,6 +83,8 @@ export function NurseDashboard() {
           </div>
           <input 
             type="text" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar paciente..."
             className="pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full md:w-64 bg-white"
           />
@@ -111,13 +92,13 @@ export function NurseDashboard() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        {patients.length > 0 ? (
+        {filteredPatients.length > 0 ? (
           <div className="divide-y divide-slate-100">
-            {patients.map((item) => (
-              <div key={item.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {filteredPatients.map((appt) => (
+              <div key={appt.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="hidden sm:flex h-12 w-12 rounded-full bg-amber-100 text-amber-700 items-center justify-center font-bold text-lg">
-                    {item.patient.firstName[0]}{item.patient.lastName[0]}
+                    {appt.patient.firstName[0]}{appt.patient.lastName[0]}
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -126,20 +107,20 @@ export function NurseDashboard() {
                         En Espera
                       </span>
                       <span className="text-sm font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                        {item.time}
+                        {appt.time}
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-900">
-                      {item.patient.firstName} {item.patient.lastName}
+                      {appt.patient.firstName} {appt.patient.lastName}
                     </h3>
                     <p className="text-sm text-slate-500">
-                      DNI: {item.patient.documentNumber}
+                      DNI: {appt.patient.documentNumber}
                     </p>
                   </div>
                 </div>
 
                 <button 
-                  onClick={() => handleTakeVitals(item)}
+                  onClick={() => handleTakeVitals(appt)}
                   className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2"
                 >
                   <Activity className="w-4 h-4" />
@@ -157,37 +138,37 @@ export function NurseDashboard() {
       </div>
 
       <Modal
-        open={!!selectedPatient}
+        open={!!selectedAppointment}
         onOpenChange={(isOpen) => !isOpen && handleCloseModal()}
         title="Evaluación de Triage"
         description="Registre los signos vitales del paciente."
       >
-        {selectedPatient && (
+        {selectedAppointment && (
           <div className="space-y-6">
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div className="flex justify-between items-start mb-3 border-b border-slate-200 pb-3">
                 <div>
                   <h4 className="text-lg font-bold text-slate-900">
-                    {selectedPatient.patient.firstName} {selectedPatient.patient.lastName}
+                    {selectedAppointment.patient.firstName} {selectedAppointment.patient.lastName}
                   </h4>
                   <p className="text-sm text-slate-600 font-medium">
-                    Edad: {selectedPatient.patient.age} años | Tipo de sangre: <span className="text-red-600 font-bold">{selectedPatient.medicalBackground.bloodType}</span>
+                    Edad: {selectedAppointment.patient.age ? selectedAppointment.patient.age : "Desconocida"} | Tipo de sangre: <span className="text-red-600 font-bold">{selectedAppointment.patient.medicalBackground?.bloodType || "Desconocido"}</span>
                   </p>
                 </div>
               </div>
 
-              {(selectedPatient.medicalBackground.allergies.length > 0 || selectedPatient.medicalBackground.chronicDiseases.length > 0) && (
+              {(selectedAppointment.patient.medicalBackground?.allergies?.length > 0 || selectedAppointment.patient.medicalBackground?.chronicDiseases?.length > 0) && (
                 <div className="space-y-2">
-                  {selectedPatient.medicalBackground.allergies.length > 0 && (
+                  {selectedAppointment.patient.medicalBackground.allergies.length > 0 && (
                     <div className="flex items-center gap-2 bg-red-50 text-red-700 px-3 py-2 rounded-lg border border-red-100">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span className="text-sm font-bold uppercase">Alergias: {selectedPatient.medicalBackground.allergies.join(", ")}</span>
+                      <span className="text-sm font-bold uppercase">Alergias: {selectedAppointment.patient.medicalBackground.allergies.join(", ")}</span>
                     </div>
                   )}
-                  {selectedPatient.medicalBackground.chronicDiseases.length > 0 && (
+                  {selectedAppointment.patient.medicalBackground.chronicDiseases.length > 0 && (
                     <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-2 rounded-lg border border-amber-200">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span className="text-sm font-bold">Enfermedades crónicas: {selectedPatient.medicalBackground.chronicDiseases.join(", ")}</span>
+                      <span className="text-sm font-bold">Enfermedades crónicas: {selectedAppointment.patient.medicalBackground.chronicDiseases.join(", ")}</span>
                     </div>
                   )}
                 </div>
