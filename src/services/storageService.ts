@@ -18,6 +18,7 @@ export interface Patient {
 
 export interface Appointment {
   id: number;
+  date: string;
   time: string;
   patient: Patient;
   reason: string;
@@ -52,6 +53,7 @@ export interface ConsultationRecord {
 const INITIAL_APPOINTMENTS: Appointment[] = [
   {
     id: 1,
+    date: "2026-04-30",
     time: "08:30 AM",
     patient: { 
       firstName: "Carlos", 
@@ -65,6 +67,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
   },
   {
     id: 2,
+    date: "2026-04-30",
     time: "09:15 AM",
     patient: { 
       firstName: "María", 
@@ -78,6 +81,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
   },
   {
     id: 3,
+    date: "2026-04-30",
     time: "10:00 AM",
     patient: { 
       firstName: "Juan", 
@@ -91,6 +95,7 @@ const INITIAL_APPOINTMENTS: Appointment[] = [
   },
   {
     id: 4,
+    date: "2026-05-01",
     time: "11:30 AM",
     patient: { 
       firstName: "Ana", 
@@ -161,6 +166,35 @@ export const storageService = {
 
     // Update appointment status to COMPLETED
     storageService.updateAppointmentStatus(record.appointmentId, 'COMPLETED');
+
+    //Update patient history
+    const appointment = storageService.getAppointmentById(record.appointmentId);
+    
+    if (appointment && appointment.patient.documentNumber) {
+      const docNumber = appointment.patient.documentNumber;
+      
+      // Obtain existing history map or initialize it if not present
+      const historyData = localStorage.getItem(HISTORY_KEY);
+      const historyMap: Record<string, ConsultationHistory[]> = historyData ? JSON.parse(historyData) : {};
+      
+      if (!historyMap[docNumber]) {
+        historyMap[docNumber] = [];
+      }
+
+      // Convert the consultation record into a history entry
+      const newHistoryEntry: ConsultationHistory = {
+        id: Date.now(), // Unique ID based on timestamp
+        date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+        diagnosisCie10: record.assessment,
+        plan: record.plan,
+        prescriptions: record.prescriptions.map(p => `${p.medication} ${p.dose} - ${p.frequency}`)
+      };
+
+      historyMap[docNumber].unshift(newHistoryEntry);
+      
+      // Save the updated history map back to localStorage
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(historyMap));
+    }
   },
 
   // History

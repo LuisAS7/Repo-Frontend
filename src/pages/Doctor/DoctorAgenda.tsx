@@ -12,9 +12,18 @@ export function DoctorAgenda() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Load appointments from local storage on mount
-        setAppointments(storageService.getAppointments());
-    }, []);
+        // Obtain all appointments from storage
+        const allAppointments = storageService.getAppointments();
+        
+        const formattedCurrentDate = format(currentDate, "yyyy-MM-dd");
+        
+        // Filter appointments for the current date
+        const dailyAppointments = allAppointments.filter(
+            appt => appt.date === formattedCurrentDate
+        );
+
+        setAppointments(dailyAppointments);
+    }, [currentDate]);
 
     const handlePrevDay = () => setCurrentDate(subDays(currentDate, 1));
     const handleNextDay = () => setCurrentDate(addDays(currentDate, 1));
