@@ -15,7 +15,7 @@ const doctorsData = [
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)));
 
 export function ReceptionDirectoryPage() {
-  const [directory, setDirectory] = useState<Patient[]>(() => storageService.getPatientsDirectory())
+  const [directory] = useState<Patient[]>(() => storageService.getPatientsDirectory())
   const [search, setSearch] = useState(() => {
     return localStorage.getItem('reception_search') ?? ""
   });
