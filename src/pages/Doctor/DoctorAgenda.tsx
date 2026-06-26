@@ -1,15 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, User, FileText, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, User, FileText, ArrowRight, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { storageService } from "../../services/storageService";
 import type { Appointment } from "../../services/storageService";
+
+function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Buenos días";
+    if (hour >= 12 && hour < 20) return "Buenas tardes";
+    return "Buenas noches";
+}
 
 export function DoctorAgenda() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const navigate = useNavigate();
+    const dateInputRef = useRef<HTMLInputElement>(null);
+
+    const storedUser = JSON.parse(localStorage.getItem('valsync_user') ?? '{}') as { name?: string };
+    const doctorName = storedUser.name ?? 'Doctor';
 
     useEffect(() => {
         // Obtain all appointments from storage
@@ -38,26 +49,52 @@ export function DoctorAgenda() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                Buenos días, Dr. Torres
+                {getGreeting()}, {doctorName}
             </h1>
             <p className="text-slate-500 mt-2 text-lg">
-                Tienes <span className="font-semibold text-blue-600">4 citas</span> programadas para hoy.
+                Tienes{" "}
+                <span className="font-semibold text-blue-600">
+                    {appointments.filter(a => a.status !== 'CANCELED').length} citas
+                </span>{" "}
+                programadas para hoy.
             </p>
             </div>
 
             <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
-            <button 
+            <button
                 onClick={handlePrevDay}
                 className="p-2 hover:bg-white rounded-lg transition-colors text-slate-600 shadow-sm"
             >
                 <ChevronLeft className="w-5 h-5" />
             </button>
-            
-            <div className="min-w-35 text-center font-medium text-slate-700 capitalize">
-                {format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}
+
+            {/* Mini calendar — clicking the date area opens the native date picker */}
+            <div className="relative min-w-35 flex items-center justify-center gap-2">
+                <span className="font-medium text-slate-700 capitalize">
+                    {format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}
+                </span>
+                <button
+                    onClick={() => dateInputRef.current?.showPicker()}
+                    className="p-1 hover:bg-white rounded-md transition-colors text-slate-400 hover:text-blue-600"
+                    title="Seleccionar fecha"
+                >
+                    <CalendarDays className="w-4 h-4" />
+                </button>
+                <input
+                    ref={dateInputRef}
+                    type="date"
+                    value={format(currentDate, "yyyy-MM-dd")}
+                    onChange={e => {
+                        if (e.target.value) {
+                            const [y, m, d] = e.target.value.split('-').map(Number);
+                            setCurrentDate(new Date(y, m - 1, d));
+                        }
+                    }}
+                    className="sr-only"
+                />
             </div>
 
-            <button 
+            <button
                 onClick={handleNextDay}
                 className="p-2 hover:bg-white rounded-lg transition-colors text-slate-600 shadow-sm"
             >
