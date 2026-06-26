@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { TEST_ACCOUNTS, type User } from '../types/auth'
+import { authService } from '../services/authService'
+import type { User } from '../types/auth'
 
 interface Props {
   onLogin: (user: User) => void
@@ -15,15 +16,40 @@ export default function LoginPage({ onLogin }: Props) {
     e.preventDefault()
     setError('')
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 600))
-    const account = TEST_ACCOUNTS[email.toLowerCase()]
-    if (!account || account.password !== password) {
-      setError('Correo o contraseña incorrectos.')
+
+    try {
+      // Llamamos al servicio de autenticación para obtener el token
+      const response = await authService.login(email.toLowerCase(), password);
+      
+      // Si la respuesta es exitosa, guardamos el token en localStorage
+      localStorage.setItem('valsync_token', response.access_token);
+      
+      const userData = await authService.getMe(); 
+
+      // Mapeamos el usuario a un objeto User y llamamos a onLogin para actualizar el estado global
+      const loggedUser: User = { 
+          email: userData.email, 
+          role: userData.role.toLowerCase(),
+          name: `${userData.first_name} ${userData.last_name}`
+      };
+
+      onLogin(loggedUser);
+
+    } catch (err: any) {
+      console.error("Error en login:", err);
+
+      const backendDetail = err.response?.data?.detail;
+
+      if (typeof backendDetail === 'string') {
+        setError(backendDetail);
+      } else if (Array.isArray(backendDetail)) {
+        setError(`Error de validación: ${backendDetail[0]?.msg || 'Datos incorrectos'}`);
+      } else {
+        setError('Correo o contraseña incorrectos. Por favor, verifique sus credenciales.');
+      }
+    } finally {
       setLoading(false)
-      return
     }
-    setLoading(false)
-    onLogin(account.user)
   }
 
   return (
@@ -113,28 +139,12 @@ export default function LoginPage({ onLogin }: Props) {
               </p>
             )}
 
-            <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-center">
-              <p className="text-xs text-blue-600 font-semibold mb-1">
-                Cuentas de prueba (password: pass123):
-              </p>
-              {Object.keys(TEST_ACCOUNTS).map((acc) => (
-                <button
-                  key={acc}
-                  type="button"
-                  onClick={() => { setEmail(acc); setPassword('pass123'); setError('') }}
-                  className="block w-full text-xs text-blue-500 hover:text-blue-700 hover:underline transition py-0.5 cursor-pointer"
-                >
-                  {acc}
-                </button>
-              ))}
-            </div>
-
             <button
               type="submit"
               disabled={loading}
               className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
-              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              {loading ? 'Validando credenciales...' : 'Iniciar Sesión'}
             </button>
           </form>
 
