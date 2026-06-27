@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
     User, CreditCard, Activity, AlertTriangle, Thermometer, 
     Heart, Scale, Search, Plus, Trash2, FileText, Download,
@@ -6,14 +6,19 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { storageService } from "../../services/storageService";
-import type { Appointment, ConsultationHistory } from "../../services/storageService";
 
 export function Consultation() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     
-    const [appointment, setAppointment] = useState<Appointment | null>(null);
-    const [pastHistory, setPastHistory] = useState<ConsultationHistory[]>([]);
+    const appointment = useMemo(() => {
+        return id ? (storageService.getAppointmentById(Number(id)) || null) : null;
+    }, [id]);
+    const pastHistory = useMemo(() => {
+        if (!id) return [];
+        const appt = storageService.getAppointmentById(Number(id));
+        return (appt && appt.patient.documentNumber) ? storageService.getPatientHistory(appt.patient.documentNumber) : [];
+    }, [id]);
 
     const [activeTab, setActiveTab] = useState<'general' | 'soap' | 'history'>('soap');
     
@@ -26,17 +31,8 @@ export function Consultation() {
     const [prescriptions, setPrescriptions] = useState([{ medication: "", dose: "", frequency: "", durationDays: "" }]);
 
     useEffect(() => {
-        if (id) {
-            const appt = storageService.getAppointmentById(Number(id));
-            if (appt) {
-                setAppointment(appt);
-                if (appt.patient.documentNumber) {
-                    setPastHistory(storageService.getPatientHistory(appt.patient.documentNumber));
-                }
-            } else {
-                // If appointment not found, go back
-                navigate('/doctor/agenda');
-            }
+        if (id && !storageService.getAppointmentById(Number(id))) {
+            navigate('/doctor/agenda');
         }
     }, [id, navigate]);
 
