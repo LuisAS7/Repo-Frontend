@@ -230,7 +230,7 @@ export const storageService = {
   // History
   getPatientHistory: (documentNumber: string): ConsultationHistory[] => {
     const data = localStorage.getItem(HISTORY_KEY);
-    let historyMap: Record<string, ConsultationHistory[]> = {};
+    let historyMap: Record<string, ConsultationHistory[]>;
     
     if (!data) {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(INITIAL_HISTORY));
