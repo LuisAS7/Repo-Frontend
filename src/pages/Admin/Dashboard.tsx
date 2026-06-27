@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Calendar, Users, XCircle } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { storageService } from "../../services/storageService";
-import type { Appointment } from "../../services/storageService";
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -17,12 +16,7 @@ const getStatusBadge = (status: string) => {
 };
 
 export function Dashboard() {
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
-
-    useEffect(() => {
-        // Charge appointments from storage on component mount
-        setAppointments(storageService.getAppointments());
-    }, []);
+    const appointments = useMemo(() => storageService.getAppointments(), []);
 
     // Calculate metrics for the dashboard
     const totalAppointments = appointments.length;

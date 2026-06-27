@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -17,13 +17,9 @@ const getRoleBadge = (role: string) => {
 };
 
 export function StaffPage() {
-    const [staff, setStaff] = useState<Staff[]>([]);
+    const [staff, setStaff] = useState<Staff[]>(() => storageService.getStaff());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState("");
-
-    useEffect(() => {
-        setStaff(storageService.getStaff());
-    }, []);
 
     const toggleStatus = (id: number) => {
         storageService.toggleStaffStatus(id); // Update status in storage

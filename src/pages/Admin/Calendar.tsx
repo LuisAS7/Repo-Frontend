@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, Calendar as CalendarIcon, Filter, Clock, Activity } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { storageService } from "../../services/storageService";
-import type { Appointment, Staff } from "../../services/storageService";
 
 const getStatusBadge = (status: string) => {
     switch (status) {
@@ -16,17 +15,12 @@ const getStatusBadge = (status: string) => {
 };
 
 export function CalendarPage() {
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [staffDoctors, setStaffDoctors] = useState<Staff[]>([]);
+    const appointments = useMemo(() => storageService.getAppointments(), []);
+    const staffDoctors = useMemo(() => storageService.getStaff().filter(s => s.role === "Doctor"), []);
 
     const [selectedSpecialty, setSelectedSpecialty] = useState("Todas las especialidades");
     const [selectedDoctor, setSelectedDoctor] = useState("Todos los médicos");
     const [searchTerm, setSearchTerm] = useState("");
-
-    useEffect(() => {
-        setAppointments(storageService.getAppointments());
-        setStaffDoctors(storageService.getStaff().filter(s => s.role === "Doctor"));
-    }, []);
 
     const specialties = useMemo(() => {
         // Obtain unique specialties from doctor staff
