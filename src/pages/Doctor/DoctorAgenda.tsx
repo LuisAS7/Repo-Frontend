@@ -1,28 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, User, FileText, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { storageService } from "../../services/storageService";
-import type { Appointment } from "../../services/storageService";
 
 export function DoctorAgenda() {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        // Obtain all appointments from storage
+    // Filter appointments for the current date
+    const appointments = useMemo(() => {
         const allAppointments = storageService.getAppointments();
-        
         const formattedCurrentDate = format(currentDate, "yyyy-MM-dd");
-        
-        // Filter appointments for the current date
-        const dailyAppointments = allAppointments.filter(
-            appt => appt.date === formattedCurrentDate
-        );
-
-        setAppointments(dailyAppointments);
+        return allAppointments.filter(appt => appt.date === formattedCurrentDate);
     }, [currentDate]);
 
     const handlePrevDay = () => setCurrentDate(subDays(currentDate, 1));
