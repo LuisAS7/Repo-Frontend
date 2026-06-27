@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Activity, Search, AlertTriangle } from "lucide-react";
 import { Modal } from '../../components/ui/Modal'
 import { storageService } from '../../services/storageService';
 import type { Appointment } from '../../services/storageService';
 
 export function NurseDashboard() {
-  const [waitingPatients, setWaitingPatients] = useState<Appointment[]>([]);
+  const [waitingPatients, setWaitingPatients] = useState<Appointment[]>(() => {
+    return storageService.getAppointments().filter(a => a.status === 'WAITING');
+  });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   
   const [weight, setWeight] = useState("");
@@ -18,10 +20,6 @@ export function NurseDashboard() {
     const all = storageService.getAppointments();
     setWaitingPatients(all.filter(a => a.status === 'WAITING'));
   };
-
-  useEffect(() => { 
-    loadWaitingPatients();
-  }, []);
 
   const handleTakeVitals = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
