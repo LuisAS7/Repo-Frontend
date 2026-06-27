@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { UserPlus, UserCheck } from "lucide-react"
 import { StatusBadge } from "./components/StatusBadge"
 import { FilterBar } from "./components/FilterBar"
@@ -19,11 +19,6 @@ const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)))
 export function ReceptionPage() {
   const [queue, setQueue] = useState(() => storageService.getAppointments())
   
-  // Update localStorage whenever queue changes
-  useEffect(() => {
-    setQueue(storageService.getAppointments());
-  }, []);
-
   const [filterDoctor, setFilterDoctor] = useState("")
   const [filterSpecialty, setFilterSpecialty] = useState("")
   const [isWalkInOpen, setIsWalkInOpen] = useState(false)
