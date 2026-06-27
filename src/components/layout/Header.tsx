@@ -3,32 +3,22 @@ import type { User } from "../../types/auth";
 import { useEffect, useState } from "react";
 
 export function Header({ user }: { user: User | null }) {
-    const [isDark, setIsDark] = useState(false);
+    const [isDark, setIsDark] = useState(() => {
+        return localStorage.getItem("theme") === "dark";
+    });
 
-    //
     useEffect(() => {
-        const savedtheme = localStorage.getItem("theme");
-        if (savedtheme === "dark") {
-            document.documentElement.classList.add('dark'); 
-            setIsDark(true);
-        } else { 
-            //
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem("theme", "dark");
+        } else {
             document.documentElement.classList.remove('dark');
-            setIsDark(false);
+            localStorage.setItem("theme", "light");
         }
-    }, []);
+    }, [isDark]);
 
     const toggleDarkMode = () => {
-        const root = document.documentElement;
-        if (isDark) {
-            root.classList.remove('dark');
-            localStorage.setItem("theme", "light");
-            setIsDark(false);
-        } else {
-            root.classList.add('dark');
-            localStorage.setItem("theme", "dark");
-            setIsDark(true);
-        }
+        setIsDark(prev => !prev);
     };
     
     if (!user) return null;
