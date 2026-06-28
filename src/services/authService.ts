@@ -1,25 +1,51 @@
 import { axiosClient } from './axiosClient';
+import type { TokenResponse, CurrentUser } from '../types/api.types';
+
+const TOKEN_KEY = 'valsync_token';
 
 export const authService = {
-    // Función para llamar a FastAPI y obtener el token
-    login: async (username: string, password: string) => {
-        // Transformamos los datos a formato x-www-form-urlencoded
-        const formData = new URLSearchParams();
-        formData.append('username', username);
-        formData.append('password', password);
+  /**
+   * Authenticates a user and stores the JWT token in localStorage.
+   * Maps to: POST /auth/login (OAuth2PasswordRequestForm)
+   */
+  login: async (email: string, password: string): Promise<TokenResponse> => {
+    const formData = new URLSearchParams();
+    formData.append('username', email);
+    formData.append('password', password);
 
-        // Hacemos la petición POST a /auth/login
-        const response = await axiosClient.post('/auth/login', formData, {
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        });
+    const response = await axiosClient.post<TokenResponse>('/auth/login', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
 
-        return response.data;
-    },
+    // Store token automatically so axiosClient can inject it
+    localStorage.setItem(TOKEN_KEY, response.data.access_token);
 
-    getMe: async () => {
-        const response = await axiosClient.get('/staff/me');
-        return response.data;
-    }
+    return response.data;
+  },
+
+  /**
+   * Retrieves the currently authenticated user's profile.
+   * Maps to: GET /users/me
+   */
+  getMe: async (): Promise<CurrentUser> => {
+    const response = await axiosClient.get<CurrentUser>('/users/me');
+    return response.data;
+  },
+
+  /**
+   * Clears the JWT token from localStorage, effectively logging out the user.
+   */
+  logout: (): void => {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.href = '/login';
+  },
+
+  /**
+   * Checks whether a token exists in localStorage.
+   */
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem(TOKEN_KEY);
+  },
 };
