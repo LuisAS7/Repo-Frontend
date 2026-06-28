@@ -157,18 +157,18 @@ export function NurseDashboard() {
                 </div>
               </div>
 
-              {(selectedAppointment.patient.medicalBackground?.allergies?.length > 0 || selectedAppointment.patient.medicalBackground?.chronicDiseases?.length > 0) && (
+              {((selectedAppointment.patient.medicalBackground?.allergies?.length ?? 0) > 0 || (selectedAppointment.patient.medicalBackground?.chronicDiseases?.length ?? 0) > 0) && (
                 <div className="space-y-2">
-                  {selectedAppointment.patient.medicalBackground.allergies.length > 0 && (
+                  {(selectedAppointment.patient.medicalBackground?.allergies?.length ?? 0) > 0 && (
                     <div className="flex items-center gap-2 bg-red-50 text-red-700 px-3 py-2 rounded-lg border border-red-100">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span className="text-sm font-bold uppercase">Alergias: {selectedAppointment.patient.medicalBackground.allergies.join(", ")}</span>
+                      <span className="text-sm font-bold uppercase">Alergias: {selectedAppointment.patient.medicalBackground?.allergies?.join(", ")}</span>
                     </div>
                   )}
-                  {selectedAppointment.patient.medicalBackground.chronicDiseases.length > 0 && (
+                  {(selectedAppointment.patient.medicalBackground?.chronicDiseases?.length ?? 0 )> 0 && (
                     <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-2 rounded-lg border border-amber-200">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span className="text-sm font-bold">Enfermedades crónicas: {selectedAppointment.patient.medicalBackground.chronicDiseases.join(", ")}</span>
+                      <span className="text-sm font-bold">Enfermedades crónicas: {selectedAppointment.patient.medicalBackground?.chronicDiseases?.join(", ")}</span>
                     </div>
                   )}
                 </div>

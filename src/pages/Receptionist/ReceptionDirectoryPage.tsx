@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Search, CalendarDays, User, Phone, Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Search, CalendarDays, User, Phone, Check, X } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { storageService } from "../../services/storageService";
 import type { Patient } from "../../services/storageService";
@@ -15,7 +15,7 @@ const doctorsData = [
 const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)));
 
 export function ReceptionDirectoryPage() {
-  const [directory, setDirectory] = useState<Patient[]>(() => storageService.getPatientsDirectory())
+  const [directory] = useState<Patient[]>(() => storageService.getPatientsDirectory())
   const [search, setSearch] = useState(() => {
     return localStorage.getItem('reception_search') ?? ""
   });
@@ -24,6 +24,25 @@ export function ReceptionDirectoryPage() {
 
   const [bookingSpecialty, setBookingSpecialty] = useState("");
   const [bookingDoctor, setBookingDoctor] = useState("");
+  const [bookingDate, setBookingDate] = useState("");
+  const [bookingTime, setBookingTime] = useState("");
+  const [bookingReason, setBookingReason] = useState("");
+
+  // Specialty combobox state
+  const [specialtyInput, setSpecialtyInput] = useState("");
+  const [isSpecialtyOpen, setIsSpecialtyOpen] = useState(false);
+  const specialtyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (specialtyRef.current && !specialtyRef.current.contains(e.target as Node)) {
+        setIsSpecialtyOpen(false);
+        setSpecialtyInput(bookingSpecialty);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [bookingSpecialty]);
 
   const filteredDirectory = directory.filter(p => {
     const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
@@ -35,23 +54,32 @@ export function ReceptionDirectoryPage() {
     localStorage.setItem('reception_search', search)
   }, [search])
 
+  const resetBookingForm = () => {
+    setBookingSpecialty("");
+    setBookingDoctor("");
+    setBookingDate("");
+    setBookingTime("");
+    setBookingReason("");
+    setSpecialtyInput("");
+  };
+
+  const handleCloseModal = () => {
+    setSelectedPatient(null);
+    resetBookingForm();
+  };
+
   const handleBookSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!selectedPatient) return;
 
-    const dateInput = (document.getElementById('date') as HTMLInputElement).value;
-    const timeInput = (document.getElementById('time') as HTMLSelectElement).value;
-    const reasonInput = (document.getElementById('reason') as HTMLTextAreaElement).value;
     const doctorName = doctorsData.find(d => d.id === bookingDoctor)?.name ?? 'Por asignar';
 
-    // Use storageService for add appointment
     storageService.addAppointment({
       id: Date.now(),
-      date: dateInput,
-      time: timeInput,
+      date: bookingDate,
+      time: bookingTime,
       patient: selectedPatient,
-      reason: reasonInput,
+      reason: bookingReason,
       doctor: doctorName,
       status: 'SCHEDULED'
     });
@@ -59,11 +87,9 @@ export function ReceptionDirectoryPage() {
     setIsSuccess(true);
     setTimeout(() => {
       setIsSuccess(false);
-      setSelectedPatient(null);
-      setBookingSpecialty("");
-      setBookingDoctor("");
+      handleCloseModal();
     }, 2000);
-}
+  };
 
   const availableDoctors = doctorsData.filter(d => d.specialty === bookingSpecialty);
 
@@ -132,7 +158,7 @@ export function ReceptionDirectoryPage() {
       {/* Booking Modal */}
       <Modal
         open={!!selectedPatient}
-        onOpenChange={(isOpen) => !isOpen && setSelectedPatient(null)}
+        onOpenChange={(isOpen) => !isOpen && handleCloseModal()}
         title="Agendar Nueva Cita"
         description="Seleccione médico y horario para programar la atención."
       >
@@ -153,24 +179,68 @@ export function ReceptionDirectoryPage() {
               </div>
 
               <div className="space-y-4">
-                {/* Step 1: Specialty */}
+                {/* Step 1: Specialty combobox */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="specialty">1. Seleccione Especialidad</label>
-                  <select
-                    id="specialty"
-                    value={bookingSpecialty}
-                    onChange={(e) => {
-                      setBookingSpecialty(e.target.value);
-                      setBookingDoctor(""); // Reset doctor when specialty changes
-                    }}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
-                    required
-                  >
-                    <option value="">Seleccione una especialidad...</option>
-                    {specialtiesList.map(spec => (
-                      <option key={spec} value={spec}>{spec}</option>
-                    ))}
-                  </select>
+                  <label className="text-sm font-medium text-slate-700">1. Seleccione Especialidad</label>
+                  <div className="relative" ref={specialtyRef}>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={specialtyInput}
+                        required
+                        onFocus={() => setIsSpecialtyOpen(true)}
+                        onChange={e => {
+                          setSpecialtyInput(e.target.value);
+                          setIsSpecialtyOpen(true);
+                          if (!e.target.value) {
+                            setBookingSpecialty("");
+                            setBookingDoctor("");
+                          }
+                        }}
+                        placeholder="Buscar especialidad..."
+                        className="w-full pl-9 pr-8 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm"
+                      />
+                      {specialtyInput && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSpecialtyInput("");
+                            setBookingSpecialty("");
+                            setBookingDoctor("");
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {isSpecialtyOpen && (
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+                        {specialtiesList
+                          .filter(s => s.toLowerCase().includes(specialtyInput.toLowerCase()))
+                          .map(s => (
+                            <button
+                              key={s}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                              onMouseDown={e => {
+                                e.preventDefault();
+                                setSpecialtyInput(s);
+                                setBookingSpecialty(s);
+                                setBookingDoctor("");
+                                setIsSpecialtyOpen(false);
+                              }}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        {specialtiesList.filter(s => s.toLowerCase().includes(specialtyInput.toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-sm text-slate-400">Sin resultados</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Step 2: Doctor */}
@@ -196,14 +266,16 @@ export function ReceptionDirectoryPage() {
                   <label className="text-sm font-medium text-slate-700 block mb-1">3. Seleccione Fecha y Hora</label>
                   <div className="grid grid-cols-2 gap-4">
                     <input
-                      id="date"
                       type="date"
+                      value={bookingDate}
+                      onChange={e => setBookingDate(e.target.value)}
                       className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400"
                       required
                       disabled={!bookingDoctor}
                     />
                     <select
-                      id="time"
+                      value={bookingTime}
+                      onChange={e => setBookingTime(e.target.value)}
                       className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm disabled:bg-slate-50 disabled:text-slate-400"
                       required
                       disabled={!bookingDoctor}
@@ -219,10 +291,11 @@ export function ReceptionDirectoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="reason">Motivo de Consulta</label>
+                  <label className="text-sm font-medium text-slate-700">Motivo de Consulta</label>
                   <textarea
-                    id="reason"
                     rows={2}
+                    value={bookingReason}
+                    onChange={e => setBookingReason(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm resize-none disabled:bg-slate-50 disabled:text-slate-400"
                     placeholder="Breve descripción del motivo de la cita..."
                     required
@@ -234,7 +307,7 @@ export function ReceptionDirectoryPage() {
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setSelectedPatient(null)}
+                  onClick={handleCloseModal}
                   className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors focus:ring-2 focus:ring-slate-500"
                 >
                   Cancelar
