@@ -8,6 +8,7 @@ export function NurseDashboard() {
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [weight, setWeight] = useState("");
@@ -56,7 +57,27 @@ export function NurseDashboard() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Will be implemented in next commit
+    if (!selectedAppointment) return;
+
+    try {
+      setIsSubmitting(true);
+      const bmi = calculateBMI();
+
+      await nurseService.registerTriage(selectedAppointment.id, {
+        weight_kg: parseFloat(weight),
+        height_cm: parseFloat(height),
+        bmi: bmi !== "--" ? parseFloat(bmi) : undefined,
+        blood_pressure: bloodPressure,
+        temperature_c: parseFloat(temperature),
+      });
+
+      await loadWaitingAppointments();
+      setSelectedAppointment(null);
+    } catch (err) {
+      setError('Error al registrar el triage. Intente nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filteredAppointments = appointments.filter(appt => {
@@ -86,7 +107,6 @@ export function NurseDashboard() {
         </div>
       </div>
 
-      {/* Error state */}
       {error && (
         <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
           <AlertTriangle className="w-5 h-5 shrink-0" />
@@ -100,7 +120,6 @@ export function NurseDashboard() {
         </div>
       )}
 
-      {/* Loading state */}
       {isLoading ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
           <Activity className="w-12 h-12 text-slate-300 mx-auto mb-4 animate-pulse" />
@@ -157,7 +176,6 @@ export function NurseDashboard() {
         </div>
       )}
 
-      {/* Modal */}
       <Modal
         open={!!selectedAppointment}
         onOpenChange={(isOpen) => !isOpen && handleCloseModal()}
@@ -237,9 +255,10 @@ export function NurseDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors flex items-center gap-2"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Guardar y Enviar al Médico
+                  {isSubmitting ? 'Guardando...' : 'Guardar y Enviar al Médico'}
                 </button>
               </div>
             </form>
