@@ -71,3 +71,31 @@ export interface StaffResponse {
     };
   } | null;
 }
+
+export type StaffRole = "ADMIN" | "DOCTOR" | "NURSE" | "RECEPTIONIST"
+
+export interface StaffCreatePayload {
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+  role: StaffRole
+  is_active?: boolean
+  doctor_profile?: {
+    medical_license: string
+    specialty_id: string
+  }
+}
+
+export interface StaffUpdatePayload {
+  first_name?: string
+  last_name?: string
+  email?: string
+  is_active?: boolean
+}
+
+export interface SpecialtyResponse {
+  id: string
+  name: string
+  description: string
+}
