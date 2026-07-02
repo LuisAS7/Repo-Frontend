@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, {AxiosError} from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -21,7 +21,7 @@ axiosClient.interceptors.request.use(
         }
         return config;
     },
-    (error) => {
+    (error: AxiosError) => {
         return Promise.reject(error);
     }
 );
@@ -32,12 +32,12 @@ axiosClient.interceptors.response.use(
         // Cualquier código de estado 2xx activa esta función
         return response;
     },
-    (error) => {
+    (error: AxiosError) => {
         // Cualquier código de estado fuera de 2xx (ej. 401, 403, 500) activa esto
-        if (error.response && error.response.status === 401) {
+        if (error.response?.status === 401) {
             console.error("Token expirado o inválido. Redirigiendo al login...");
             localStorage.removeItem('valsync_token');
-            window.location.href = '/login'; 
+            window.location.href = '/'; 
         }
         return Promise.reject(error);
     }
