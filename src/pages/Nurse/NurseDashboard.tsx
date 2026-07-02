@@ -3,6 +3,7 @@ import { Activity, Search, AlertTriangle } from "lucide-react";
 import { Modal } from '../../components/ui/Modal'
 import { nurseService } from '../../services/nurseService';
 import type { AppointmentResponse } from '../../types/api.types';
+import { t } from '../../utils/translations';
 
 export function NurseDashboard() {
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([]);
@@ -17,14 +18,16 @@ export function NurseDashboard() {
   const [temperature, setTemperature] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const isFormValid = weight && height && bloodPressure && temperature;
+
   const loadWaitingAppointments = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const data = await nurseService.getWaitingAppointments();
       setAppointments(data);
-    } catch (err) {
-      setError('Error al cargar los pacientes en espera. Intente nuevamente.');
+    } catch (err: any) {
+      setError(t.error(err.response?.data?.detail) || 'Error al cargar los pacientes. Intente nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -73,8 +76,8 @@ export function NurseDashboard() {
 
       await loadWaitingAppointments();
       setSelectedAppointment(null);
-    } catch (err) {
-      setError('Error al registrar el triage. Intente nuevamente.');
+    } catch (err: any) {
+      setError(t.error(err.response?.data?.detail) || 'Error al registrar el triage. Intente nuevamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -130,10 +133,7 @@ export function NurseDashboard() {
           {filteredAppointments.length > 0 ? (
             <div className="divide-y divide-slate-100">
               {filteredAppointments.map((appt) => (
-                <div
-                  key={appt.id}
-                  className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                >
+                <div key={appt.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="hidden sm:flex h-12 w-12 rounded-full bg-amber-100 text-amber-700 items-center justify-center font-bold text-lg">
                       <Activity className="w-5 h-5" />
@@ -142,32 +142,27 @@ export function NurseDashboard() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                          En Espera
+                          {t.status(appt.status)}
                         </span>
                         <span className="text-sm font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                           {appt.scheduled_time}
                         </span>
                       </div>
-                      <h3 className="text-lg font-bold text-slate-900">
-                        Cita #{appt.id.slice(0, 8)}
-                      </h3>
-                      <p className="text-sm text-slate-500">
-                        Motivo: {appt.reason || 'No especificado'} · Fecha: {appt.scheduled_date}
-                      </p>
+                      <h3 className="text-lg font-bold text-slate-900">Cita #{appt.id.slice(0, 8)}</h3>
+                      <p className="text-sm text-slate-500">Motivo: {appt.reason || 'No especificado'} · Fecha: {appt.scheduled_date}</p>
                     </div>
                   </div>
-
                   <button
                     onClick={() => handleTakeVitals(appt)}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm focus:ring-2 focus:ring-blue-500 flex items-center justify-center gap-2"
                   >
-                    <Activity className="w-4 h-4" />
-                    Tomar Signos Vitales
+                    <Activity className="w-4 h-4" /> Tomar Signos Vitales
                   </button>
                 </div>
               ))}
             </div>
           ) : (
+            // Estado vacío correcto
             <div className="p-12 text-center text-slate-500">
               <Activity className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p className="text-lg font-medium">No hay pacientes esperando triage en este momento.</p>
@@ -255,7 +250,7 @@ export function NurseDashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isFormValid}
                   className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Guardando...' : 'Guardar y Enviar al Médico'}
