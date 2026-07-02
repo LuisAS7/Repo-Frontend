@@ -8,31 +8,54 @@ export type AppointmentStatus =
 export type AppointmentOrigin = "VALSYNC" | "VALCARE" | "WALK_IN";
 
 export interface AppointmentResponse {
-  id: string;
-  patient_id: string;
-  doctor_id: string | null;
-  scheduled_date: string;  // "2026-06-08"
-  scheduled_time: string;  // "13:30:00"
-  reason: string | null;
-  status: AppointmentStatus;
-  origin: AppointmentOrigin;
-  cancellation_reason: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string
+  patient_id: string
+  doctor_id: string | null
+  scheduled_date: string
+  scheduled_time: string
+  reason: string | null
+  status: AppointmentStatus
+  origin: AppointmentOrigin
+  cancellation_reason: string | null
+  created_at: string
+  updated_at: string
+  triage: {
+    id: string
+    weight_kg: string | null
+    height_cm: string | null
+    bmi: string | null
+    blood_pressure: string | null
+    temperature_c: string | null
+    notes: string | null
+  } | null
+  consultation: any | null
 }
 
 export interface PatientResponse {
-  id: string;
-  document_number: string;
-  first_name: string;
-  last_name: string;
-  birth_date: string;
-  gender: string | null;
-  phone: string | null;
-  email: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  id: string
+  document_number: string
+  first_name: string
+  last_name: string
+  birth_date: string
+  gender: string | null
+  phone: string | null
+  email: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  medical_background: {
+    id: string
+    blood_type: string | null
+    notes: string | null
+  } | null
+  allergies: {
+    id: string
+    name: string
+  }[]
+  chronic_diseases: {
+    id: string
+    name: string
+  }[]
 }
 
 export interface PatientCreatePayload {
