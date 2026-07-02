@@ -24,3 +24,11 @@ dist-ssr
 *.sw?
 
 .vite/
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Variables de entorno (¡Súper importante!)
+.env

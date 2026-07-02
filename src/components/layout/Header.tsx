@@ -2,6 +2,13 @@ import { Bell, Moon, Sun } from "lucide-react";
 import type { User } from "../../types/auth";
 import { useEffect, useState } from "react";
 
+function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Buenos días";
+    if (hour >= 12 && hour < 20) return "Buenas tardes";
+    return "Buenas noches";
+}
+
 export function Header({ user }: { user: User | null }) {
     const [isDark, setIsDark] = useState(() => {
         return localStorage.getItem("theme") === "dark";
@@ -33,7 +40,13 @@ export function Header({ user }: { user: User | null }) {
     const initials = user.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
 
     return (
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-end px-4 md:px-6 lg:px-8 shrink-0 transition-colors">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 lg:px-8 shrink-0 transition-colors">
+            {/* Greeting */}
+            <p className="hidden md:block text-sm text-slate-500 dark:text-slate-400">
+                {getGreeting()},{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{user.name}</span>
+            </p>
+
             <div className="flex items-center gap-6">
                 {/* Dark Mode Toggle */}
                 <button
