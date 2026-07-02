@@ -1,89 +1,133 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { UserPlus, UserCheck } from "lucide-react"
 import { StatusBadge } from "./components/StatusBadge"
 import { FilterBar } from "./components/FilterBar"
 import { WalkInModal } from "./components/WalkInModal"
-import { storageService } from "../../services/storageService"
-import { format } from "date-fns"
-
-const doctorsData = [
-  { id: "1", name: "Dr. Torres", specialty: "Medicina General" },
-  { id: "2", name: "Dra. Ruiz", specialty: "Pediatría" },
-  { id: "3", name: "Dr. Burke", specialty: "Cardiología" },
-  { id: "4", name: "Dra. Fernández", specialty: "Dermatología" },
-  { id: "5", name: "Dr. Shepard", specialty: "Neurología" },
-]
-
-const specialtiesList = Array.from(new Set(doctorsData.map(d => d.specialty)))
+import { appointmentService } from "../../services/appointmentService"
+import { patientService } from "../../services/patientService"
+import type { AppointmentResponse, PatientResponse, StaffResponse } from "../../types/reception"
+import { apiClient } from "../../services/apiClient"
 
 export function ReceptionPage() {
-  const [queue, setQueue] = useState(() => storageService.getAppointments())
-  
+  const [appointments, setAppointments] = useState<AppointmentResponse[]>([])
+  const [patients, setPatients] = useState<Map<string, PatientResponse>>(new Map())
+  const [doctors, setDoctors] = useState<StaffResponse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [filterDoctor, setFilterDoctor] = useState("")
   const [filterSpecialty, setFilterSpecialty] = useState("")
   const [isWalkInOpen, setIsWalkInOpen] = useState(false)
 
-  const filteredQueue = queue.filter(item => {
-    const matchDoctor = filterDoctor === "" || item.doctor === filterDoctor
-    const matchSpecialty = filterSpecialty === "" || doctorsData.find(d => d.name === item.doctor)?.specialty === filterSpecialty
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const [appts, pats, staff] = await Promise.all([
+          appointmentService.getAll(),
+          patientService.getAll(),
+          apiClient.get<StaffResponse[]>("/staff/"),
+        ])
+        setAppointments(appts)
+        setPatients(new Map(pats.map(p => [p.id, p])))
+        setDoctors(staff.filter(s => s.role === "DOCTOR" && s.is_active))
+      } catch (err: any) {
+        setError(err.message ?? "Error al cargar datos")
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const specialtiesList = Array.from(
+    new Set(doctors.map(d => d.doctor_profile?.specialty.name).filter(Boolean))
+  ) as string[]
+
+  const doctorsData = doctors.map(d => ({
+    id: d.id,
+    name: `${d.first_name} ${d.last_name}`,
+    specialty: d.doctor_profile?.specialty.name ?? "",
+  }))
+
+  const getDoctorName = (doctorId: string | null) => {
+    if (!doctorId) return "Sin asignar"
+    const doc = doctorsData.find(d => d.id === doctorId)
+    return doc ? doc.name : "Doctor desconocido"
+  }
+
+  const filteredQueue = appointments.filter(item => {
+    const doctorName = getDoctorName(item.doctor_id)
+    const matchDoctor = filterDoctor === "" || doctorName === filterDoctor
+    const matchSpecialty = filterSpecialty === "" ||
+      doctorsData.find(d => d.name === doctorName)?.specialty === filterSpecialty
     return matchDoctor && matchSpecialty
   })
 
-  const handleMarkArrived = (id: number) => {
-    storageService.updateAppointmentStatus(id, 'WAITING'); // Update in storage
-    setQueue(storageService.getAppointments()); // Refresh local state from storage
+  const handleMarkArrived = (id: string) => {
+    // Actualización optimista en UI
+    // Si el back agrega PATCH /appointments/{id}/status, agrégalo aquí
+    setAppointments(prev =>
+      prev.map(a => a.id === id ? { ...a, status: "WAITING" } : a)
+    )
   }
 
-  const handleCancel = (id: number) => {
-    storageService.updateAppointmentStatus(id, 'CANCELED');
-    setQueue(storageService.getAppointments());
+  const handleCancel = async (id: string) => {
+    try {
+      await appointmentService.cancel(id, "Cancelado desde recepción")
+      setAppointments(prev =>
+        prev.map(a => a.id === id ? { ...a, status: "CANCELLED" } : a)
+      )
+    } catch (err: any) {
+      alert(err.message ?? "Error al cancelar la cita")
+    }
   }
 
-  const handleWalkIn = ({ dni, firstName, lastName, phone }: { dni: string; firstName: string; lastName: string; phone: string }) => {
-    const today = new Date();
-    const formattedDate = format(today, "yyyy-MM-dd");
-
-    // Agregar a la agenda
-    storageService.addAppointment({
-      id: Date.now(),
-      date: formattedDate,
-      time: "Ahora (Walk-in)",
-      patient: {
-        firstName,
-        lastName,
-        documentNumber: dni,
+  const handleWalkIn = async ({
+    dni, firstName, lastName, birthDate, phone,
+  }: {
+    dni: string; firstName: string; lastName: string; birthDate: string; phone: string
+  }) => {
+    try {
+      // 1. Registrar paciente
+      const newPatient = await patientService.create({
+        document_number: dni,
+        first_name: firstName,
+        last_name: lastName,
+        birth_date: birthDate,
         phone,
-        lastVisit: formattedDate
-      },
-      reason: "Atención de urgencia / Ingreso rápido",
-      doctor: "Asignación rápida",
-      status: "WAITING" // Un walk-in pasa directo a esperar Triage
-    });
+      })
 
-    // Refresh local state
-    setQueue(storageService.getAppointments());
-    setIsWalkInOpen(false);
+      // 2. Crear walk-in con el nuevo endpoint
+      const today = new Date().toISOString().split("T")[0]
+      const newAppt = await apiClient.post<AppointmentResponse>("/appointments/walk-in", {
+        patient_id: newPatient.id,
+        scheduled_date: today,
+        reason: "Atención de urgencia / Ingreso rápido",
+      })
+
+      setAppointments(prev => [...prev, newAppt])
+      setPatients(prev => new Map(prev).set(newPatient.id, newPatient))
+      setIsWalkInOpen(false)
+    } catch (err: any) {
+      alert(err.message ?? "Error al registrar el walk-in")
+    }
   }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Agenda Diaria (Recepción)</h1>
           <p className="text-slate-500 mt-1">Gestión de pacientes programados y atenciones de urgencia.</p>
         </div>
-        <button
-          onClick={() => setIsWalkInOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm"
-        >
+        <button onClick={() => setIsWalkInOpen(true)}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm">
           <UserPlus className="size-5" />
           Ingreso Rápido (Walk-in)
         </button>
       </div>
 
-      {/* Filtros */}
       <FilterBar
         doctorsData={doctorsData}
         specialtiesList={specialtiesList}
@@ -93,55 +137,70 @@ export function ReceptionPage() {
         onDoctorChange={setFilterDoctor}
       />
 
-      {/* Tabla */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
-              <tr>
-                <th className="px-6 py-4 font-medium">Hora</th>
-                <th className="px-6 py-4 font-medium">Paciente</th>
-                <th className="px-6 py-4 font-medium">Médico Asignado</th>
-                <th className="px-6 py-4 font-medium">Estado</th>
-                <th className="px-6 py-4 font-medium text-center">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-center">
-              {filteredQueue.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-slate-700">{item.time}</td>
-                  <td className="px-6 py-4 font-bold text-slate-900">{item.patient.firstName} {item.patient.lastName}</td>
-                  <td className="px-6 py-4 text-slate-600">{item.doctor}</td>
-                  <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
-                  <td className="px-6 py-4">
-                    {item.status === "SCHEDULED" && (
-                      <button
-                        onClick={() => handleMarkArrived(item.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 font-medium rounded-lg transition-colors border border-green-200"
-                      >
-                        <UserCheck className="w-4 h-4" /> Marcar Llegada
-                      </button>
-                    )}
-                    {item.status === "WAITING" && (
-                      <button
-                        onClick={() => handleCancel(item.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-medium rounded-lg transition-colors border border-red-200"
-                      >
-                        Cancelar
-                      </button>
-                    )}
-                    {item.status === "CANCELED" && (
-                      <span className="text-slate-400 italic text-xs">Sin acciones</span>
-                    )}
-                  </td>
+        {loading ? (
+          <div className="p-12 text-center text-slate-400">Cargando citas...</div>
+        ) : error ? (
+          <div className="p-12 text-center text-red-500">{error}</div>
+        ) : filteredQueue.length === 0 ? (
+          <div className="p-12 text-center text-slate-400">No hay citas para mostrar.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Hora</th>
+                  <th className="px-6 py-4 font-medium">Paciente</th>
+                  <th className="px-6 py-4 font-medium">Médico Asignado</th>
+                  <th className="px-6 py-4 font-medium">Estado</th>
+                  <th className="px-6 py-4 font-medium text-center">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-center">
+                {filteredQueue.map(item => {
+                  const patient = patients.get(item.patient_id)
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-700">
+                        {item.scheduled_time.slice(0, 5)}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-slate-900">
+                        {patient
+                          ? `${patient.first_name} ${patient.last_name}`
+                          : "Cargando..."}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        {getDoctorName(item.doctor_id)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={item.status} />
+                      </td>
+                      <td className="px-6 py-4">
+                        {item.status === "SCHEDULED" && (
+                          <button onClick={() => handleMarkArrived(item.id)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 font-medium rounded-lg border border-green-200">
+                            <UserCheck className="w-4 h-4" /> Marcar Llegada
+                          </button>
+                        )}
+                        {item.status === "WAITING" && (
+                          <button onClick={() => handleCancel(item.id)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 font-medium rounded-lg border border-red-200">
+                            Cancelar
+                          </button>
+                        )}
+                        {["CANCELLED", "COMPLETED", "READY"].includes(item.status) && (
+                          <span className="text-slate-400 italic text-xs">Sin acciones</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Modal Walk-in */}
       <WalkInModal
         open={isWalkInOpen}
         onOpenChange={setIsWalkInOpen}
