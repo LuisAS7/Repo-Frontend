@@ -1,16 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { authService } from '../services/authService'
-import type { User } from '../types/auth'
+import { useAuthStore } from '../context/useAuthStore'
+import { t } from '../utils/translations' 
 
-interface Props {
-  onLogin: (user: User) => void
-}
-
-export default function LoginPage({ onLogin }: Props) {
+export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const { login } = useAuthStore()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -18,44 +16,24 @@ export default function LoginPage({ onLogin }: Props) {
     setLoading(true)
 
     try {
-      // Llamamos al servicio de autenticación para obtener el token
-      const response = await authService.login(email.toLowerCase(), password);
-
-      // Si la respuesta es exitosa, guardamos el token en localStorage
-      localStorage.setItem('valsync_token', response.access_token);
-
-      const userData = await authService.getMe();
-
-      // Mapeamos el usuario a un objeto User y llamamos a onLogin para actualizar el estado global
-      const loggedUser: User = {
-        id: userData.id,
-        email: userData.email,
-        role: userData.role.toLowerCase(),
-        name: `${userData.first_name} ${userData.last_name}`
-      };
-
-      onLogin(loggedUser);
-
+      // El store actualiza el estado del usuario
+      await login(email.trim(), password);
     } catch (err: any) {
       console.error("Error en login:", err);
-
       const backendDetail = err.response?.data?.detail;
 
-      if (typeof backendDetail === 'string') {
-        setError(backendDetail);
-      } else if (Array.isArray(backendDetail)) {
-        setError(`Error de validación: ${backendDetail[0]?.msg || 'Datos incorrectos'}`);
+      if (Array.isArray(backendDetail)) {
+        setError('Error de validación: Revise que el correo tenga un formato válido.');
       } else {
-        setError('Correo o contraseña incorrectos. Por favor, verifique sus credenciales.');
+        setError(t.error(backendDetail)); 
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex">
-
       {/* Panel izquierdo */}
       <div
         className="hidden lg:flex lg:w-[46%] flex-col justify-between p-12 relative overflow-hidden"
@@ -86,7 +64,7 @@ export default function LoginPage({ onLogin }: Props) {
             Gestión clínica<br />moderna para tu<br />equipo
           </h1>
           <p className="text-blue-200 text-base leading-relaxed max-w-xs">
-            Sistema integrado para coordinación médica, control de triage y gestión eficiente de pacientes
+            Sistema integrado para coordinación médica, control de triaje y gestión eficiente de pacientes
           </p>
         </div>
 

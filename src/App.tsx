@@ -1,5 +1,9 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from './context/useAuthStore'
+import type { UserRole } from './types/auth'
+
+// Importación de páginas
 import LoginPage from './pages/LoginPage'
 import { Dashboard as AdminDashboard } from './pages/Admin/Dashboard'
 import { StaffPage } from './pages/Admin/Staff'
@@ -11,101 +15,80 @@ import { ReceptionPage } from './pages/Receptionist/ReceptionPage'
 import { ReceptionDirectoryPage } from './pages/Receptionist/ReceptionDirectoryPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 import { Layout } from './components/layout/Layout'
-import type { User } from './types/auth'
-
-const SESSION_KEY = 'valsync_user'
+import { ProtectedRoute } from './components/auth/protectedRoute'
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const stored = localStorage.getItem(SESSION_KEY)
-      return stored ? JSON.parse(stored) : null
-    } catch {
-      return null
-    }
-  })
+  const { user, isLoading, checkAuth, logout } = useAuthStore()
 
-  const handleLogin = (loggedUser: User) => {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(loggedUser))
-    setUser(loggedUser)
-  }
+  // Estado local para manejar el usuario en el componente principal
+  useEffect(() => {
+    // Al cargar la app, verificamos si hay un token válido
+    checkAuth();
+  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem(SESSION_KEY)
-    setUser(null)
-  }
-
-  if (!user) return <LoginPage onLogin={handleLogin} />
-
-  const getDefaultRoute = (role: User["role"]) => {
+  const getDefaultRoute = (role?: UserRole) => {
     switch (role) {
-      case "admin":
-        return "/admin"
-      case "receptionist":
-        return "/reception"
-      case "doctor":
-        return "/doctor/agenda"
-      case "nurse":
-        return "/nurse"
-      default:
-        return "/unauthorized"
+      case "admin": return "/admin";
+      case "receptionist": return "/reception";
+      case "doctor": return "/doctor/agenda";
+      case "nurse": return "/nurse";
+      default: return "/";
     }
+  };
+
+  // Bloqueo de pantalla mientras se valida el token
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-gray-500 font-medium animate-pulse">Cargando...</div>
+      </div>
+    );
   }
 
-  // Uncomment if you want to bypass the router for doctors
-  // if (user.role === 'doctor') {
-  //   return <DoctorDashboard user={user} onLogout={() => setUser(null)} />
-  // }
   return (
     <BrowserRouter>
       <Routes>
-        {/* Redirige la raíz según el rol */}
+        {/* Ruta Pública */}
         <Route 
           path="/" 
-          element={<Navigate to={getDefaultRoute(user.role)} replace />} 
+          element={user ? <Navigate to={getDefaultRoute(user.role)} replace /> : <LoginPage />}
         />
 
-        {/* Rutas de ADMIN */}
-        <Route
-          path="/admin"
-          element={<Layout user={user} onLogout={handleLogout} />}
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="staff" element={<StaffPage />} />
-          <Route path="calendar" element={<CalendarPage />} />
-        </Route>
-        {/* Rutas de DOCTOR */}
-        <Route 
-          path="/doctor" 
-          element={<Layout user={user} onLogout={handleLogout} />}
-        >
-          <Route path="agenda" element={<DoctorAgenda />} />
-          <Route path="consultation/:id" element={<Consultation />} />
-        </Route>
-        {/* Rutas de ENFERMERA */}
-        <Route 
-          path="/nurse" 
-          element={<Layout user={user} onLogout={handleLogout} />} 
-        >
-          <Route index element={<NurseDashboard />} />
-        </Route>
-        {/* Rutas de RECEPCION */}
-        <Route 
-          path="/reception" 
-          element={<Layout user={user} onLogout={handleLogout} />} 
-        >
-          <Route index element={<ReceptionPage />} />
-          <Route path="directory" element={<ReceptionDirectoryPage />} />
+        {/* RUTAS PROTEGIDAS - ADMIN */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<Layout user={user!} onLogout={logout} />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="staff" element={<StaffPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+          </Route>
         </Route>
 
-        {/* Rutas de BLOQUEO */}
+        {/* RUTAS PROTEGIDAS - DOCTOR */}
+        <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
+          <Route path="/doctor" element={<Layout user={user!} onLogout={logout} />}>
+            <Route path="agenda" element={<DoctorAgenda />} />
+            <Route path="consultation/:id" element={<Consultation />} />
+          </Route>
+        </Route>
+
+        {/* RUTAS PROTEGIDAS - ENFERMERA */}
+        <Route element={<ProtectedRoute allowedRoles={['nurse']} />}>
+          <Route path="/nurse" element={<Layout user={user!} onLogout={logout} />}>
+            <Route index element={<NurseDashboard />} />
+          </Route>
+        </Route>
+
+        {/* RUTAS PROTEGIDAS - RECEPCIÓN */}
+        <Route element={<ProtectedRoute allowedRoles={['receptionist']} />}>
+          <Route path="/reception" element={<Layout user={user!} onLogout={logout} />}>
+            <Route index element={<ReceptionPage />} />
+            <Route path="directory" element={<ReceptionDirectoryPage />} />
+          </Route>
+        </Route>
+
+        {/* RUTAS DE ERROR Y FALLBACK */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        
-        {/* Fallback */}
-        <Route 
-          path="*" 
-          element={<Navigate to={getDefaultRoute(user.role)} replace />} 
-        />
+        <Route path="*" element={<Navigate to={user ? getDefaultRoute(user.role) : "/"} replace />} />
       </Routes>
     </BrowserRouter>
   )
