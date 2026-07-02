@@ -5,7 +5,7 @@ export type AppointmentStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
-export type AppointmentOrigin = 'VALSYNC' | 'VALCARE';
+export type AppointmentOrigin = 'VALSYNC' | 'VALCARE' | 'WALK_IN';
 
 // -------------------------------------------------------------------
 // TRIAGE
