@@ -10,7 +10,7 @@ export function Sidebar({ user, onLogout }: { user: User | null; onLogout: () =>
 
     const handleLogout = () => {
         onLogout();
-        navigate("/login");
+        navigate("/");
     };
 
     const getNavigation = () => {
