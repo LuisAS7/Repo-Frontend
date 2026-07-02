@@ -6,7 +6,6 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../../services/apiClient";
-import { appointmentService } from "../../services/appointmentService";
 import type { AppointmentResponse, PatientResponse } from "../../types/reception";
 
 interface DiagnosisCatalog {

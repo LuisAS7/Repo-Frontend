@@ -30,7 +30,7 @@ export const authService = {
    * Maps to: GET /users/me
    */
   getMe: async (): Promise<CurrentUser> => {
-    const response = await axiosClient.get<CurrentUser>('/users/me');
+    const response = await axiosClient.get<CurrentUser>('/staff/me');
     return response.data;
   },
 

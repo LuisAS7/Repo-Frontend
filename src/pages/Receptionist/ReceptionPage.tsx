@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { UserPlus, UserCheck } from "lucide-react"
 import { StatusBadge } from "./components/StatusBadge"
 import { FilterBar } from "./components/FilterBar"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Activity, Search, AlertTriangle } from "lucide-react";
 import { Modal } from '../../components/ui/Modal'
 import { nurseService } from '../../services/nurseService';
