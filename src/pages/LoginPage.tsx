@@ -7,10 +7,10 @@ interface Props {
 }
 
 export default function LoginPage({ onLogin }: Props) {
-  const [email, setEmail]       = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -20,17 +20,18 @@ export default function LoginPage({ onLogin }: Props) {
     try {
       // Llamamos al servicio de autenticación para obtener el token
       const response = await authService.login(email.toLowerCase(), password);
-      
+
       // Si la respuesta es exitosa, guardamos el token en localStorage
       localStorage.setItem('valsync_token', response.access_token);
-      
-      const userData = await authService.getMe(); 
+
+      const userData = await authService.getMe();
 
       // Mapeamos el usuario a un objeto User y llamamos a onLogin para actualizar el estado global
-      const loggedUser: User = { 
-          email: userData.email, 
-          role: userData.role.toLowerCase(),
-          name: `${userData.first_name} ${userData.last_name}`
+      const loggedUser: User = {
+        id: userData.id,
+        email: userData.email,
+        role: userData.role.toLowerCase(),
+        name: `${userData.first_name} ${userData.last_name}`
       };
 
       onLogin(loggedUser);
@@ -73,9 +74,9 @@ export default function LoginPage({ onLogin }: Props) {
           <div className="flex items-center gap-3 mb-16">
             <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c-5 0-8 2-8 4v1h16v-1c0-2-3-4-8-4z" fill="#22d3ee"/>
-                <rect x="11" y="14" width="2" height="4" rx="1" fill="white"/>
-                <rect x="9" y="16" width="6" height="2" rx="1" fill="white"/>
+                <path d="M12 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c-5 0-8 2-8 4v1h16v-1c0-2-3-4-8-4z" fill="#22d3ee" />
+                <rect x="11" y="14" width="2" height="4" rx="1" fill="white" />
+                <rect x="9" y="16" width="6" height="2" rx="1" fill="white" />
               </svg>
             </div>
             <span className="text-white text-2xl font-bold tracking-tight">ValSync</span>
