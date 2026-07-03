@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { authService } from '../services/authService';
 import type { User, UserRole } from '../types/auth';
 import type { CurrentUser } from '../types/api.types';
+import { useNotificationStore } from './useNotificationStore';
 
 interface AuthState {
     user: User | null;
@@ -37,6 +38,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     logout: () => {
         authService.logout();
         set({ user: null, isLoading: false });
+        useNotificationStore.getState().clearNotifications(); // Limpiamos las notificaciones al cerrar sesión
     },
 
     checkAuth: async () => {
@@ -54,6 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             // Si el token expiró o es inválido, el backend dará error
             // Limpiamos el rastro y deslogueamos
             authService.logout();
+            useNotificationStore.getState().clearNotifications();
             set({ user: null, isLoading: false });
         }
     }
