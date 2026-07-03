@@ -7,4 +7,10 @@ export const patientService = {
 
   create: (data: PatientCreatePayload) =>
     apiClient.post<PatientResponse>("/patients/", data),
+
+  update: (patientId: string, data: Partial<Record<string, any>>) =>
+    apiClient.patch<PatientResponse>(`/patients/${patientId}`, data),
+
+  updateStatus: (patientId: string, isActive: boolean) =>
+    apiClient.patch<PatientResponse>(`/patients/${patientId}/status`, { is_active: isActive }),
 };
