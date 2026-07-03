@@ -64,30 +64,32 @@ export const catalogTranslations: Record<string, string> = {
 
 // Traductores de errores del backend
 export const translateBackendError = (errorDetail: string | any): string => {
-    if (!errorDetail || typeof errorDetail !== 'string') return 'Ocurrió un error inesperado.';
+    if (!errorDetail || typeof errorDetail !== 'string') return 'Ocurrió un error inesperado, por favor intente nuevamente más tarde';
 
-    const detail = errorDetail.toLowerCase();
+    let detail = typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail);
+    detail = detail.toLowerCase();
 
     // Errores de Autenticación
-    if (detail.includes('invalid email or password')) return 'Correo o contraseña incorrectos.';
+    if (detail.includes('invalid email or password') || detail.includes('unauthorized')) return 'Correo o contraseña incorrectos';
     
     // Errores de Conflicto (Duplicados)
-    if (detail.includes('already registered in the system')) return 'Este correo electrónico ya se encuentra registrado.';
-    if (detail.includes('document number') && detail.includes('already registered')) return 'El número de documento ya está registrado en el sistema.';
-    if (detail.includes('already booked')) return 'El horario seleccionado ya está reservado para este médico.';
+    if (detail.includes('already registered in the system')) return 'Este correo electrónico ya se encuentra registrado en el sistema';
+    if (detail.includes('document number') && detail.includes('already registered')) return 'El número de documento ya está registrado en el sistema';
+    if (detail.includes('not found')) return 'El recurso solicitado o usuario no fue encontrado en el sistema';
+    if (detail.includes('already booked')) return 'El horario seleccionado ya está reservado para este médico. Por favor, elija otro horario.';
     
     // Errores de Validación
-    if (detail.includes('past appointment') || detail.includes('in the past')) return 'No se pueden programar citas en fechas u horas pasadas.';
-    if (detail.includes('transition appointment from')) return 'No se puede cambiar la cita a ese estado actualmente.';
-    if (detail.includes('do not exist in the database')) return 'Algunos de los datos de catálogo seleccionados no son válidos.';
+    if (detail.includes('past appointment') || detail.includes('in the past')) return 'No se pueden programar citas en fechas u horas pasadas';
+    if (detail.includes('transition appointment from')) return 'No se puede cambiar la cita a ese estado actualmente';
+    if (detail.includes('do not exist in the database')) return 'Algunos de los datos de catálogo seleccionados no son válidos';
     
     // Errores de No Encontrado (404)
-    if (detail.includes('staff member') && detail.includes('not found')) return 'El miembro del personal no fue encontrado.';
-    if (detail.includes('patient') && detail.includes('not found')) return 'El paciente indicado no fue encontrado.';
-    if (detail.includes('appointment') && detail.includes('not found')) return 'La cita indicada no fue encontrada.';
+    if (detail.includes('staff member') && detail.includes('not found')) return 'El miembro del personal no fue encontrado';
+    if (detail.includes('patient') && detail.includes('not found')) return 'El paciente indicado no fue encontrado';
+    if (detail.includes('appointment') && detail.includes('not found')) return 'La cita indicada no fue encontrada';
 
-  // Fallback genérico
-  return errorDetail; // Si es un error desconocido, mostramos el original
+    // Fallback genérico
+    return typeof errorDetail === 'string' ? errorDetail : 'Error procesando la solicitud';
 };
 
 // Helpers para traducciones de especialidades médicas
