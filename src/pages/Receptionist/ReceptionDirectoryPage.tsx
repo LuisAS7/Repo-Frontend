@@ -109,7 +109,7 @@ export function ReceptionDirectoryPage() {
   const filteredDirectory = directory.filter(p => {
     const fullName = `${p.first_name} ${p.last_name}`.toLowerCase()
     return fullName.includes(search.toLowerCase()) ||
-      p.email.toLowerCase().includes(search.toLowerCase())
+      (p.email || '').toLowerCase().includes(search.toLowerCase())
   })
 
   const resetForm = () => {
@@ -195,7 +195,7 @@ export function ReceptionDirectoryPage() {
     setEditPatientData({
       first_name: patient.first_name,
       last_name: patient.last_name,
-      email: patient.email,
+      email: patient.email ?? "",
       phone: patient.phone ?? "",
     });
   };
