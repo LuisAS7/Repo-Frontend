@@ -29,12 +29,12 @@ axiosClient.interceptors.request.use(
 // Interceptor de respuestas (response) - Para manejar errores globalmente, como expiración de token
 axiosClient.interceptors.response.use(
     (response) => {
-        // Cualquier código de estado 2xx activa esta función
         return response;
     },
-    (error: AxiosError) => {
+    (error) => {
+        const originalRequestURL = error.config?.url;
         // Cualquier código de estado fuera de 2xx (ej. 401, 403, 500) activa esto
-        if (error.response?.status === 401) {
+        if (error.response  && error.response.status === 401 && !originalRequestURL?.includes('/auth/login')) {
             console.error("Token expirado o inválido. Redirigiendo al login...");
             localStorage.removeItem('valsync_token');
             window.location.href = '/'; 

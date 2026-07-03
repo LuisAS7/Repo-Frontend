@@ -39,7 +39,7 @@ export const authService = {
    */
   logout: (): void => {
     localStorage.removeItem(TOKEN_KEY);
-    window.location.href = '/login';
+    window.location.href = '/';
   },
 
   /**
