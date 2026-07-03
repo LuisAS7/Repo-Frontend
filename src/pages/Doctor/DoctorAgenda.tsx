@@ -78,7 +78,7 @@ export function DoctorAgenda() {
       {/* Top Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight dark:text-white">
             {getGreeting()}, {doctorName}
           </h1>
           <p className="text-slate-500 mt-2 text-lg">

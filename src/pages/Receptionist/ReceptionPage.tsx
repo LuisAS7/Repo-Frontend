@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { UserPlus, UserCheck } from "lucide-react"
+import {toast} from "react-hot-toast"
 import { StatusBadge } from "./components/StatusBadge"
 import { FilterBar } from "./components/FilterBar"
 import { WalkInModal } from "./components/WalkInModal"
@@ -7,6 +8,8 @@ import { appointmentService } from "../../services/appointmentService"
 import { patientService } from "../../services/patientService"
 import type { AppointmentResponse, PatientResponse, StaffResponse } from "../../types/reception"
 import { apiClient } from "../../services/apiClient"
+import { t } from "../../utils/translations"
+import { useNotificationStore } from "../../context/useNotificationStore"
 
 export function ReceptionPage() {
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([])
@@ -18,6 +21,8 @@ export function ReceptionPage() {
   const [filterDoctor, setFilterDoctor] = useState("")
   const [filterSpecialty, setFilterSpecialty] = useState("")
   const [isWalkInOpen, setIsWalkInOpen] = useState(false)
+
+  const { addNotification } = useNotificationStore()
 
   useEffect(() => {
     const load = async () => {
@@ -32,7 +37,10 @@ export function ReceptionPage() {
         setPatients(new Map(pats.map(p => [p.id, p])))
         setDoctors(staff.filter(s => s.role === "DOCTOR" && s.is_active))
       } catch (err: any) {
-        setError(err.message ?? "Error al cargar datos")
+        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar datos"
+        setError(message)
+        toast.error(message)
+        addNotification("error", message)
       } finally {
         setLoading(false)
       }
@@ -47,7 +55,7 @@ export function ReceptionPage() {
   const doctorsData = doctors.map(d => ({
     id: d.id,
     name: `${d.first_name} ${d.last_name}`,
-    specialty: d.doctor_profile?.specialty.name ?? "",
+    specialty: t.catalog(d.doctor_profile?.specialty.name ?? ""),
   }))
 
   const getDoctorName = (doctorId: string | null) => {
@@ -70,6 +78,8 @@ export function ReceptionPage() {
     setAppointments(prev =>
       prev.map(a => a.id === id ? { ...a, status: "WAITING" } : a)
     )
+    toast.success("Paciente marcado como llegado")
+    addNotification("success", "Paciente marcado como llegado")
   }
 
   const handleCancel = async (id: string) => {
@@ -78,8 +88,12 @@ export function ReceptionPage() {
       setAppointments(prev =>
         prev.map(a => a.id === id ? { ...a, status: "CANCELLED" } : a)
       )
+      toast.success("Cita cancelada correctamente")
+      addNotification("success", "Cita cancelada correctamente")
     } catch (err: any) {
-      alert(err.message ?? "Error al cancelar la cita")
+      const message = t.error(err.response?.data?.detail) || err.message || "Error al cancelar la cita"
+      toast.error(message)
+      addNotification("error", message)
     }
   }
 
@@ -109,8 +123,12 @@ export function ReceptionPage() {
       setAppointments(prev => [...prev, newAppt])
       setPatients(prev => new Map(prev).set(newPatient.id, newPatient))
       setIsWalkInOpen(false)
+      toast.success("Walk-in registrado correctamente")
+      addNotification("success", "Walk-in registrado correctamente")
     } catch (err: any) {
-      alert(err.message ?? "Error al registrar el walk-in")
+      const message = t.error(err.response?.data?.detail) || err.message || "Error al registrar el walk-in"
+      toast.error(message)
+      addNotification("error", message)
     }
   }
 
@@ -118,7 +136,7 @@ export function ReceptionPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Agenda Diaria (Recepción)</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Agenda Diaria (Recepción)</h1>
           <p className="text-slate-500 mt-1">Gestión de pacientes programados y atenciones de urgencia.</p>
         </div>
         <button onClick={() => setIsWalkInOpen(true)}

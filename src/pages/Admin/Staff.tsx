@@ -106,7 +106,7 @@ export function StaffPage() {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row gap-4 justify-between md:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestión de Personal</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Gestión de Personal</h1>
           <p className="text-slate-500 mt-1">Administración de usuarios y roles del sistema.</p>
         </div>
         <button

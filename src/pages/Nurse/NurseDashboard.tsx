@@ -92,7 +92,7 @@ export function NurseDashboard() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Fila de Triage</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Fila de Triage</h1>
           <p className="text-slate-500 mt-1">Pacientes en sala de espera listos para toma de signos vitales.</p>
         </div>
 
