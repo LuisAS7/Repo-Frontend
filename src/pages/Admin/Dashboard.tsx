@@ -4,6 +4,9 @@ import { Card, CardContent } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { appointmentService } from "../../services/appointmentService";
 import { patientService } from "../../services/patientService";
+import { toast } from "react-hot-toast";
+import { useNotificationStore } from "../../context/useNotificationStore";
+import { t } from "../../utils/translations";
 import { staffService } from "../../services/staffService";
 import type { AppointmentResponse, PatientResponse, StaffResponse } from "../../types/reception";
 
@@ -25,6 +28,8 @@ export function Dashboard() {
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
 
+  const { addNotification } = useNotificationStore()
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -32,18 +37,21 @@ export function Dashboard() {
           appointmentService.getAll(),
           patientService.getAll(),
           staffService.getAll(),
-        ])
-        setAppointments(appts)
-        setPatients(new Map(pats.map(p => [p.id, p])))
-        setDoctors(new Map(staff.map(s => [s.id, s])))
+        ]);
+        setAppointments(appts);
+        setPatients(new Map(pats.map(p => [p.id, p])));
+        setDoctors(new Map(staff.map(s => [s.id, s])));
       } catch (err: any) {
-        setError(err.message ?? "Error al cargar datos")
+        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar datos";
+        setError(message);
+        toast.error(message);
+        addNotification("error", message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    load()
-  }, [])
+    };
+    load();
+  }, [addNotification]);
 
   const totalAppointments   = appointments.length
   const waitingPatients     = appointments.filter(a => a.status === "WAITING" || a.status === "READY").length

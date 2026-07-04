@@ -3,6 +3,9 @@ import { Plus } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
+import { toast } from "react-hot-toast";
+import {t} from "../../utils/translations";
+import { useNotificationStore } from "../../context/useNotificationStore";
 import { staffService } from "../../services/staffService";
 import { catalogService } from "../../services/catalogService";
 import type { StaffResponse, SpecialtyResponse, StaffRole } from "../../types/reception";
@@ -24,6 +27,7 @@ export function StaffPage() {
   const [error, setError]               = useState<string | null>(null)
   const [submitting, setSubmitting]     = useState(false)
   const [isModalOpen, setIsModalOpen]   = useState(false)
+  const { addNotification } = useNotificationStore()
 
   // Form state
   const [firstName, setFirstName]   = useState("")
@@ -40,17 +44,20 @@ export function StaffPage() {
         const [staffData, specialtiesData] = await Promise.all([
           staffService.getAll(),
           catalogService.getSpecialties(),
-        ])
-        setStaff(staffData)
-        setSpecialties(specialtiesData)
+        ]);
+        setStaff(staffData);
+        setSpecialties(specialtiesData);
       } catch (err: any) {
-        setError(err.message ?? "Error al cargar datos")
+        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar datos";
+        setError(message);
+        toast.error(message);
+        addNotification("error", message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    load()
-  }, [])
+    };
+    load();
+  }, [addNotification]);
 
   const resetForm = () => {
     setFirstName(""); setLastName(""); setEmail(""); setPassword("")
@@ -61,17 +68,22 @@ export function StaffPage() {
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      await staffService.update(id, { is_active: !currentStatus })
-      setStaff(prev => prev.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s))
+      await staffService.update(id, { is_active: !currentStatus });
+      setStaff(prev => prev.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s));
+      const message = `Usuario ${!currentStatus ? "activado" : "desactivado"} correctamente`;
+      toast.success(message);
+      addNotification("success", message);
     } catch (err: any) {
-      alert(err.message ?? "Error al cambiar estado")
+      const message = t.error(err.response?.data?.detail) || err.message || "Error al cambiar estado";
+      toast.error(message);
+      addNotification("error", message);
     }
-  }
+  };
 
   const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedRole) return
-    setSubmitting(true)
+    e.preventDefault();
+    if (!selectedRole) return;
+    setSubmitting(true);
     try {
       const payload: any = {
         first_name: firstName,
@@ -80,24 +92,28 @@ export function StaffPage() {
         password,
         role: selectedRole,
         is_active: true,
-      }
+      };
 
       if (selectedRole === "DOCTOR") {
         payload.doctor_profile = {
           medical_license: medicalLicense,
           specialty_id: selectedSpecialty,
-        }
+        };
       }
 
-      const newStaff = await staffService.create(payload)
-      setStaff(prev => [newStaff, ...prev])
-      handleCloseModal()
+      const newStaff = await staffService.create(payload);
+      setStaff(prev => [newStaff, ...prev]);
+      handleCloseModal();
+      toast.success("Personal creado correctamente");
+      addNotification("success", "Personal creado correctamente");
     } catch (err: any) {
-      alert(err.message ?? "Error al crear el personal")
+      const message = t.error(err.response?.data?.detail) || err.message || "Error al crear el personal";
+      toast.error(message);
+      addNotification("error", message);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   if (loading) return <div className="p-12 text-center text-slate-400">Cargando personal...</div>
   if (error)   return <div className="p-12 text-center text-red-500">{error}</div>
