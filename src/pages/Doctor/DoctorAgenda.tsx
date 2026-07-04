@@ -3,10 +3,13 @@ import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Clock, User, FileText, ArrowRight, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../context/useAuthStore";
 import { appointmentService } from "../../services/appointmentService";
 import { patientService } from "../../services/patientService";
+import { t } from "../../utils/translations"
+import { toast } from "react-hot-toast"
+import { useNotificationStore } from "../../context/useNotificationStore";
 import type { AppointmentResponse, PatientResponse } from "../../types/reception";
-import type { User as AuthUser } from "../../types/auth";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -24,37 +27,41 @@ export function DoctorAgenda() {
   const navigate = useNavigate()
   const dateInputRef = useRef<HTMLInputElement>(null)
 
-  const storedUser = JSON.parse(localStorage.getItem('valsync_user') ?? '{}') as AuthUser
-  const doctorName = storedUser.name ?? 'Doctor'
-  const doctorId   = storedUser.id ?? ''
+  const user = useAuthStore(state => state.user);
+  const { addNotification } = useNotificationStore();
+  const doctorName = user?.name ?? "Doctor";
+  const doctorId   = user?.id ?? "";
 
   useEffect(() => {
+    if (!doctorId) return;
     const load = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
         const [appts, pats] = await Promise.all([
           appointmentService.getAll(),
           patientService.getAll(),
-        ])
+        ]);
 
-        const formattedDate = format(currentDate, "yyyy-MM-dd")
+        const formattedDate = format(currentDate, "yyyy-MM-dd");
 
-        // Filtrar citas del doctor logueado para la fecha seleccionada
         const filtered = appts.filter(a =>
           a.doctor_id === doctorId &&
           a.scheduled_date === formattedDate
-        )
+        );
 
-        setAppointments(filtered)
-        setPatients(new Map(pats.map(p => [p.id, p])))
+        setAppointments(filtered);
+        setPatients(new Map(pats.map(p => [p.id, p])));
       } catch (err: any) {
-        setError(err.message ?? "Error al cargar la agenda")
+        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar la agenda"
+        setError(message)
+        toast.error(message)
+        addNotification("error", message)
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    load()
-  }, [currentDate, doctorId])
+    };
+    load();
+  }, [currentDate, doctorId]);
 
   const getPatientName = (patientId: string) => {
     const p = patients.get(patientId)
@@ -67,6 +74,10 @@ export function DoctorAgenda() {
   const handleNextDay = () => setCurrentDate(addDays(currentDate, 1))
 
   const startConsultation = (appointmentId: string) => {
+    const patientName = getPatientName(appointments.find(a => a.id === appointmentId)?.patient_id ?? "")
+    const infoMessage = `Iniciando consulta de ${patientName}`
+    toast.loading(infoMessage)
+    addNotification("info", infoMessage)
     navigate(`/doctor/consultation/${appointmentId}`)
   }
 
@@ -78,7 +89,7 @@ export function DoctorAgenda() {
       {/* Top Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight dark:text-white">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight dark:text-dark">
             {getGreeting()}, {doctorName}
           </h1>
           <p className="text-slate-500 mt-2 text-lg">
