@@ -4,6 +4,9 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { appointmentService } from "../../services/appointmentService";
 import { patientService } from "../../services/patientService";
+import { toast } from "react-hot-toast";
+import { useNotificationStore } from "../../context/useNotificationStore";
+import { t } from "../../utils/translations";
 import { staffService } from "../../services/staffService";
 import type { AppointmentResponse, PatientResponse, StaffResponse } from "../../types/reception";
 
@@ -25,6 +28,8 @@ export function CalendarPage() {
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState<string | null>(null)
 
+  const { addNotification } = useNotificationStore()
+
   const [selectedSpecialty, setSelectedSpecialty] = useState("Todas las especialidades")
   const [selectedDoctor, setSelectedDoctor]       = useState("Todos los médicos")
   const [searchTerm, setSearchTerm]               = useState("")
@@ -36,18 +41,21 @@ export function CalendarPage() {
           appointmentService.getAll(),
           patientService.getAll(),
           staffService.getAll(),
-        ])
-        setAppointments(appts)
-        setPatients(new Map(pats.map(p => [p.id, p])))
-        setStaff(staffData.filter(s => s.role === "DOCTOR" && s.is_active))
+        ]);
+        setAppointments(appts);
+        setPatients(new Map(pats.map(p => [p.id, p])));
+        setStaff(staffData.filter(s => s.role === "DOCTOR" && s.is_active));
       } catch (err: any) {
-        setError(err.message ?? "Error al cargar datos")
+        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar datos";
+        setError(message);
+        toast.error(message);
+        addNotification("error", message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    load()
-  }, [])
+    };
+    load();
+  }, [addNotification]);
 
   const getDoctorById = (doctorId: string | null) => {
     if (!doctorId) return null
