@@ -6,6 +6,9 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../../services/apiClient";
+import { useNotificationStore } from "../../context/useNotificationStore";
+import {t} from "../../utils/translations";
+import {toast} from "react-hot-toast";
 import type { AppointmentResponse, PatientResponse } from "../../types/reception";
 
 interface DiagnosisCatalog {
@@ -50,6 +53,7 @@ export function Consultation() {
 
   const [activeTab, setActiveTab] = useState<'general' | 'soap' | 'history'>('soap')
 
+  const { addNotification } = useNotificationStore();
   // SOAP State
   const [subjective, setSubjective] = useState("")
   const [objective, setObjective]   = useState("")
@@ -72,12 +76,9 @@ export function Consultation() {
         setAppointment(appt)
         setDiagnoses(diags)
 
-        // Cargar datos del paciente
         const pat = await apiClient.get<PatientResponse>(`/patients/${appt.patient_id}`)
         setPatient(pat)
 
-        // Cargar historial de consultas pasadas del mismo paciente
-        // filtrando citas completadas
         const allAppts = await apiClient.get<AppointmentResponse[]>("/appointments/?skip=0&limit=100")
         const completed = (allAppts as any[]).filter(
           (a: AppointmentResponse) =>
@@ -88,13 +89,16 @@ export function Consultation() {
         )
         setPastHistory(completed.map((a: any) => a.consultation))
       } catch (err: any) {
-        setError(err.message ?? "Error al cargar la consulta")
+        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar la consulta"
+        setError(message)
+        toast.error(message)
+        addNotification("error", message)
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [id])
+  }, [id, addNotification])
 
   const addPrescription = () => {
     setPrescriptions([...prescriptions, { medication: "", dose: "", frequency: "", durationDays: "" }])
@@ -126,6 +130,7 @@ export function Consultation() {
   const handleFinishConsultation = async () => {
     if (!appointment) return
     setSubmitting(true)
+    const toastId = toast.loading("Guardando consulta...")
     try {
       await apiClient.post(`/appointments/${appointment.id}/consultation`, {
         subjective,
@@ -142,9 +147,13 @@ export function Consultation() {
             duration_days: parseInt(p.durationDays) || 1,
           })),
       })
-      navigate('/doctor/agenda')
+      toast.success("Consulta guardada correctamente", { id: toastId })
+      addNotification("success", "Consulta finalizada correctamente")
+      navigate("/doctor/agenda")
     } catch (err: any) {
-      alert(err.message ?? "Error al guardar la consulta")
+      const message = t.error(err.response?.data?.detail) || err.message || "Error al guardar la consulta"
+      toast.error(message, { id: toastId })
+      addNotification("error", message)
     } finally {
       setSubmitting(false)
     }
