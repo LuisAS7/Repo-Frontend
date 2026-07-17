@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Calendar, Activity, Users, UserCog, LogOut, Menu, X, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Calendar, Activity, Users, UserCog, LogOut, Menu, X, ClipboardList, Clock } from "lucide-react";
 import { useState } from "react";
 import { clsx } from "clsx";
 import type { User } from "../../types/auth";
@@ -22,6 +22,7 @@ export function Sidebar({ user, onLogout }: { user: User | null; onLogout: () =>
             { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
             { name: "Agenda General", href: "/admin/calendar", icon: Calendar },
             { name: "Personal", href: "/admin/staff", icon: UserCog },
+            { name: "Disponibilidad", href: "/admin/doctor-availability", icon: Clock },
             ];
         case "doctor":
             return [

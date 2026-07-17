@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react"
-import { UserPlus, UserCheck } from "lucide-react"
+import { UserPlus, UserCheck, CalendarDays } from "lucide-react"
 import {toast} from "react-hot-toast"
 import { StatusBadge } from "./components/StatusBadge"
 import { FilterBar } from "./components/FilterBar"
 import { WalkInModal } from "./components/WalkInModal"
+import { ScheduleAppointmentModal } from "./components/SchedulingModal"
 import { appointmentService } from "../../services/appointmentService"
 import { patientService } from "../../services/patientService"
 import type { AppointmentResponse, PatientResponse, StaffResponse } from "../../types/reception"
@@ -21,31 +22,33 @@ export function ReceptionPage() {
   const [filterDoctor, setFilterDoctor] = useState("")
   const [filterSpecialty, setFilterSpecialty] = useState("")
   const [isWalkInOpen, setIsWalkInOpen] = useState(false)
+  const [isSchedulingOpen, setIsSchedulingOpen] = useState(false)
 
   const { addNotification } = useNotificationStore()
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true)
-        const [appts, pats, staff] = await Promise.all([
-          appointmentService.getAll(),
-          patientService.getAll(),
-          apiClient.get<StaffResponse[]>("/staff/"),
-        ])
-        setAppointments(appts)
-        setPatients(new Map(pats.map(p => [p.id, p])))
-        setDoctors(staff.filter(s => s.role === "DOCTOR" && s.is_active))
-      } catch (err: any) {
-        const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar datos"
-        setError(message)
-        toast.error(message)
-        addNotification("error", message)
-      } finally {
-        setLoading(false)
-      }
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [appts, pats, staff] = await Promise.all([
+        appointmentService.getAll(),
+        patientService.getAll(),
+        apiClient.get<StaffResponse[]>("/staff/"),
+      ])
+      setAppointments(appts)
+      setPatients(new Map(pats.map(p => [p.id, p])))
+      setDoctors(staff.filter(s => s.role === "DOCTOR" && s.is_active))
+    } catch (err: any) {
+      const message = t.error(err.response?.data?.detail) || err.message || "Error al cargar datos"
+      setError(message)
+      toast.error(message)
+      addNotification("error", message)
+    } finally {
+      setLoading(false)
     }
-    load()
+  }
+
+  useEffect(() => {
+    loadData()
   }, [])
 
   const specialtiesList = Array.from(
@@ -73,8 +76,6 @@ export function ReceptionPage() {
   })
 
   const handleMarkArrived = (id: string) => {
-    // Actualización optimista en UI
-    // Si el back agrega PATCH /appointments/{id}/status, agrégalo aquí
     setAppointments(prev =>
       prev.map(a => a.id === id ? { ...a, status: "WAITING" } : a)
     )
@@ -139,11 +140,25 @@ export function ReceptionPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Agenda Diaria (Recepción)</h1>
           <p className="text-slate-500 mt-1">Gestión de pacientes programados y atenciones de urgencia.</p>
         </div>
-        <button onClick={() => setIsWalkInOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm">
-          <UserPlus className="size-5" />
-          Ingreso Rápido (Walk-in)
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setIsSchedulingOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors shadow-sm"
+          >
+            <CalendarDays className="w-5 h-5" />
+            Agendar Cita
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsWalkInOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <UserPlus className="w-5 h-5" />
+            Ingreso Rápido (Walk-in)
+          </button>
+        </div>
       </div>
 
       <FilterBar
@@ -223,6 +238,13 @@ export function ReceptionPage() {
         open={isWalkInOpen}
         onOpenChange={setIsWalkInOpen}
         onSubmit={handleWalkIn}
+      />
+
+      <ScheduleAppointmentModal
+        open={isSchedulingOpen}
+        onOpenChange={setIsSchedulingOpen}
+        patients={Array.from(patients.values())}
+        onBooked={loadData}
       />
     </div>
   )
