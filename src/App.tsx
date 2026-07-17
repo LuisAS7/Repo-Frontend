@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 import { Dashboard as AdminDashboard } from './pages/Admin/Dashboard'
 import { StaffPage } from './pages/Admin/Staff'
 import { CalendarPage } from './pages/Admin/Calendar'
+import { DoctorAvailabilityPage } from './pages/Admin/DoctorAvailabilityPage'
 import { DoctorAgenda } from './pages/Doctor/DoctorAgenda'
 import { Consultation } from './pages/Doctor/Consultation'
 import { NurseDashboard } from './pages/Nurse/NurseDashboard'
@@ -89,6 +90,7 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="staff" element={<StaffPage />} />
             <Route path="calendar" element={<CalendarPage />} />
+            <Route path="doctor-availability" element={<DoctorAvailabilityPage />} />
           </Route>
         </Route>
 

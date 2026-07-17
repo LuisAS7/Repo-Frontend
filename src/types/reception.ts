@@ -80,7 +80,7 @@ export interface StaffResponse {
   first_name: string;
   last_name: string;
   email: string;
-  role: string;
+  role: StaffRole;
   is_active: boolean;
   doctor_profile: {
     id: string;
